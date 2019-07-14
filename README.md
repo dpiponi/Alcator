@@ -7,4 +7,5 @@ An Acorn Atom emulator.
 Screenshots
 -----------
 ![Centipede screenshot](docs/centipede.gif?raw=true "Centipede screenshot")
+![Frogger screenshot](docs/frogger.gif?raw=true "Frogger screenshot")
 ![Atomcalc screenshot](docs/atomcalc.gif?raw=true "Atomcalc screenshot")
