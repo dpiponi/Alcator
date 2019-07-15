@@ -100,7 +100,7 @@ main = do
                            controllerType
 
         let keyCallback window key someInt state mods = do
-                    modifyIORef queueRef (flip pushBack (UIKey key someInt state mods))
+                    atomicModifyIORef' queueRef (flip pushBack (UIKey key someInt state mods))
         setKeyCallback window (Just keyCallback)
 
         let loop = do
