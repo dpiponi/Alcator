@@ -7,13 +7,13 @@ An Acorn Atom emulator.
 You'll need some ROMs.
 You can get them from [here](http://www.acornatom.nl/atom_handleidingen/aw123/acorn_roms.htm).
 Unpack them so the roms appear in `acorn_roms` in the top directory.
-We'll be needing `Atom_Kernel.rom` and `Atom_Basic.rom` in particular.
+We'll be needing `Atom_Kernel.rom`, `Atom_Basic.rom` and `Atom_FloatingPoint.rom` in particular.
 
 To run you'll need to install `stack` from [here](.)
 Then use:
 
     stack build
-    stack exec Stellarator-exe
+    stack exec alcator
 
 The code uses `glfw`. You may need to install `homebrew` and then run
 
