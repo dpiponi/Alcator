@@ -1083,8 +1083,8 @@ pureReadMemory PPIA addr = do
 --          -- The 0x40 is the REPT key
 --          -- PAL vertical blanking 1600 us
 --          -- NTSC vertical blanking 1333us
-            let bits = if s < 1333 then 0x40 else 0xc0
---             liftIO $ putStrLn $ "Reading 0x" ++ showHex bits "" ++ " from PPIA: 0x" ++ showHex addr ""
+            ppia2' <- load ppia2
+            let bits = if s < 1333 then ppia2' else ppia2' .|. 0x80
             return bits
         _ -> return 0
     return bits

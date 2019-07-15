@@ -113,7 +113,10 @@ updatePPIA key pressed = do
             forM_ rows $ \row -> do
                 modify (keyboard_matrix + TO row) $ bitAt column .~ not pressed
 --                 liftIO $ print (row, column, pressed)
-                
+
+updateRept :: Bool -> MonadAcorn ()
+updateRept pressed = do
+    modify ppia2 $ bitAt 6 .~ not pressed
 
 handleKey :: KeyState -> Key -> MonadAcorn ()
 handleKey motion key = do
@@ -131,4 +134,5 @@ handleKey motion key = do
                                         runDebugger
 --                                         liftIO $ killThread t
                                         resetNextFrame
+                Key'RightAlt   -> updateRept pressed
                 key -> updatePPIA key pressed

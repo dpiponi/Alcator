@@ -29,11 +29,11 @@ library
                      , dequeue
                      , clock
                      , bytestring
+                     , dequeue
                      , vector
                      , OpenGL
                      , array
                      , bytestring
-                     , proteaaudio
                      , mtl
                      , lens
                      , binary
@@ -56,13 +56,13 @@ executable alcator
                      , clock
                      , dequeue
                      , bytestring
+                     , dequeue
                      , vector
                      , OpenGL
                      , array
                      , mtl
                      , lens
                      , binary
-                     , proteaaudio
                      , cmdargs
                      , monad-loops
                      , parsec
