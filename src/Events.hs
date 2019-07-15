@@ -116,7 +116,7 @@ updatePPIA key pressed = do
 
 updateRept :: Bool -> MonadAcorn ()
 updateRept pressed = do
-    modify ppia2 $ bitAt 6 .~ not pressed
+    modify ppia2 $ bitAt 6 .~ pressed
 
 handleKey :: KeyState -> Key -> MonadAcorn ()
 handleKey motion key = do

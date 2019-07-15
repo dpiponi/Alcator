@@ -1084,7 +1084,7 @@ pureReadMemory PPIA addr = do
 --          -- PAL vertical blanking 1600 us
 --          -- NTSC vertical blanking 1333us
             ppia2' <- load ppia2
-            let bits = if s < 1333 then ppia2' else ppia2' .|. 0x80
+            let bits = if s < 1333 then (ppia2' `xor` 0x40) else (ppia2' `xor` 0x40) .|. 0x80
             return bits
         _ -> return 0
     return bits
@@ -1191,7 +1191,7 @@ renderDisplay = do
 --     (w, h) <- getFramebufferSize window
     (w, h) <- liftIO $ getWindowSize window
     mode <- load ppia0
-    let macRetinaKludge = 1
+    let macRetinaKludge = 2
     liftIO $ draw (mode .&. 0xf0) (macRetinaKludge*w) (macRetinaKludge*h) prog attrib
 --     liftIO $ print "renderDisplay 3"
 

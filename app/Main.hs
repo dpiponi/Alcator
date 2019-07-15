@@ -99,6 +99,10 @@ main = do
                            0x0000 window prog attrib tex' lastTex' textureData' lastTextureData'
                            controllerType
 
+        let keyCallback window key someInt state mods = do
+                    modifyIORef queueRef (flip pushBack (UIKey key someInt state mods))
+        setKeyCallback window (Just keyCallback)
+
         let loop = do
                 liftIO pollEvents
                 queue <- liftIO $ readIORef queueRef

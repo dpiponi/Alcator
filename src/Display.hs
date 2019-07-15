@@ -377,9 +377,9 @@ makeMainWindow screenScaleX' screenScaleY' queue = do
         Nothing -> die "Couldn't create window"
         Just createdWindow -> do
 
-            let keyCallback window key someInt state mods = do
-                        modifyIORef queue (flip pushBack (UIKey key someInt state mods))
-            setKeyCallback createdWindow (Just keyCallback)
+--             let keyCallback window key someInt state mods = do
+--                         modifyIORef queue (flip pushBack (UIKey key someInt state mods))
+--             setKeyCallback createdWindow (Just keyCallback)
 
             makeContextCurrent (Just createdWindow)
             print "Created window"
