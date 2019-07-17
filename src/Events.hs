@@ -104,35 +104,29 @@ atom_keyboard = [
     (Key'4, ([9], 2)),
     (Key'Space, ([9], 0))]
 
-updatePPIA :: Key -> Bool -> MonadAcorn ()
+updatePPIA :: Key -> Bool -> MonadAcorn Bool
 updatePPIA key pressed = do
     let op = lookup key atom_keyboard
     case op of
-        Nothing -> return ()
+        Nothing -> return False
         Just (rows, column) -> do
             forM_ rows $ \row -> do
                 modify (keyboard_matrix + TO row) $ bitAt column .~ not pressed
+            return True
 --                 liftIO $ print (row, column, pressed)
 
 updateRept :: Bool -> MonadAcorn ()
 updateRept pressed = do
     modify ppia2 $ bitAt 6 .~ pressed
 
+-- Handle keys to Alcator rather than keys for emulated machine
 handleKey :: KeyState -> Key -> MonadAcorn ()
 handleKey motion key = do
---     let scancode = keysymScancode sym
---     let mAtariKey = M.lookup key atariKeys
     let pressed = isPressed motion
     case key of
---                 DumpState        -> Emulation.dumpState
-                Key'GraveAccent         -> liftIO $ exitSuccess
-                Key'LeftAlt    -> when pressed $ do
-                                        -- Throw away SDL events
-                                        -- Rewrite as a withXXX XXX
---                                         t <- liftIO $ forkIO $ let spin = SDL.pollEvents >> spin in spin
-                                        Emulation.dumpState
-                                        runDebugger
---                                         liftIO $ killThread t
-                                        resetNextFrame
-                Key'RightAlt   -> updateRept pressed
-                key -> updatePPIA key pressed
+      Key'GraveAccent -> liftIO $ exitSuccess
+      Key'LeftAlt     -> when pressed $ do
+                              Emulation.dumpState
+                              runDebugger
+                              resetNextFrame
+      _ -> return ()

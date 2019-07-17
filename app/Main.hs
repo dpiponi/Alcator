@@ -20,6 +20,7 @@ import Data.Binary hiding (get)
 import Debugger
 import System.Exit
 import Display
+import Control.Concurrent
 import Emulation
 import Events
 import Keys
@@ -99,12 +100,23 @@ main = do
                            0x0000 window prog attrib tex' lastTex' textureData' lastTextureData'
                            controllerType
 
-        let keyCallback window key someInt state mods = do
-                    atomicModifyIORef' queueRef (flip pushBack (UIKey key someInt state mods))
-        setKeyCallback window (Just keyCallback)
+        let keyCallback atomState window key someInt state mods = do
+                  let pressed = isPressed state
+                  flip runReaderT atomState $ unM $ 
+                    case key of
+                      Key'RightAlt -> updateRept pressed
+                      _ -> do
+                          done <- updatePPIA key pressed
+                          when (not done) $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt state mods), ()))
+        setKeyCallback window (Just (keyCallback state))
+
+        --  Not at all clear this should work with GLFW
+        --  though it appears to on OSX
+        let poller = liftIO pollEvents >> poller
+        forkIO poller
 
         let loop = do
-                liftIO pollEvents
+--                 liftIO pollEvents
                 queue <- liftIO $ readIORef queueRef
                 when (not (null queue)) $ do
                     let Just (queuedKey, queue') = popFront queue
