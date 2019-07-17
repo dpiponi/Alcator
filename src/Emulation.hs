@@ -1191,7 +1191,7 @@ renderDisplay = do
 --     (w, h) <- getFramebufferSize window
     (w, h) <- liftIO $ getWindowSize window
     mode <- load ppia0
-    let macRetinaKludge = 2
+    let macRetinaKludge = 1 -- XXX figure this out
     liftIO $ draw (mode .&. 0xf0) (macRetinaKludge*w) (macRetinaKludge*h) prog attrib
 --     liftIO $ print "renderDisplay 3"
 
