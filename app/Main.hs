@@ -15,10 +15,12 @@ import Binary
 import Control.Monad
 import Control.Monad.Reader
 import Data.Array.IO
+import System.Directory
 import Data.Binary hiding (get)
 import Debugger
 import System.Exit
 import Display
+import Control.Concurrent
 import Emulation
 import Events
 import Keys
@@ -31,18 +33,15 @@ import System.Console.CmdArgs hiding ((+=))
 import Graphics.UI.GLFW
 import Data.IORef
 import Data.Dequeue
-import Sound.ProteaAudio
-#if TRACE
-import Data.Array.Storable
-#endif
 
-data Args = Args { file :: String, options :: String, command :: Maybe String, debugStart :: Bool } deriving (Show, Data, Typeable)
+data Args = Args { file :: String, options :: String, command :: Maybe String, debugStart :: Bool,  workingDirectory :: String } deriving (Show, Data, Typeable)
 
 clargs :: Args
 clargs = Args { file = "adventure.bin",
-                options = ".stellarator-options",
+                options = ".alcator-options",
                 command = Nothing,
-                debugStart = False }
+                debugStart = False,
+                workingDirectory = "." }
 
 main :: IO ()
 main = do
@@ -51,6 +50,7 @@ main = do
 
     let optionsFile = options args'
     let startCommand = command args'
+    let directory = workingDirectory args'
     putStrLn $ "Reading options from '" ++ optionsFile ++ "'"
     putStrLn $ "Debug = " ++ show (debugStart args')
     optionsString <- readFile optionsFile
@@ -68,10 +68,6 @@ main = do
     when (not rc) $ die "Couldn't init graphics"
     queueRef <- newIORef empty
     window <- makeMainWindow screenScaleX' screenScaleY' queueRef
-
-    -- init audio
-    result <- initAudio 64 44100 1024
-    unless result $ die "Couldn't init sound"
 
     (prog, attrib, tex', lastTex', textureData', lastTextureData') <- initResources alpha fontData
 
@@ -96,35 +92,51 @@ main = do
 --     readBinary ramArray "software/BB/INVADBB" (0x2900-22)
 --     readBinary ramArray "acorn_roms/Atom_Demo.rom" (0x2900)
 
-    state <- initState screenScaleX' screenScaleY'
-                       (screenWidth*screenScaleX') (screenHeight*screenScaleY')
-                       ramArray
-                       romArray
-                       0x0000 window prog attrib tex' lastTex' textureData' lastTextureData'
-                       controllerType
+    withCurrentDirectory directory $ do
+        state <- initState screenScaleX' screenScaleY'
+                           (screenWidth*screenScaleX') (screenHeight*screenScaleY')
+                           ramArray
+                           romArray
+                           0x0000 window prog attrib tex' lastTex' textureData' lastTextureData'
+                           controllerType
 
-    let loop = do
-            liftIO pollEvents
-            queue <- liftIO $ readIORef queueRef
-            when (not (null queue)) $ do
-                let Just (queuedKey, queue') = popFront queue
---                 liftIO $ print queue
-                liftIO $ writeIORef queueRef queue'
-                let UIKey {uiKey = key, uiState = motion} = queuedKey
-                handleKey motion key
-            loopUntil 1000
+        let keyCallback atomState window key someInt state mods = do
+                  let pressed = isPressed state
+                  flip runReaderT atomState $ unM $ 
+                    case key of
+                      Key'RightAlt -> updateRept pressed
+                      _ -> do
+                          done <- updatePPIA key pressed
+                          when (not done) $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt state mods), ()))
+        setKeyCallback window (Just (keyCallback state))
 
-            loop
+        --  Not at all clear this should work with GLFW
+        --  though it appears to on OSX
+        let poller = liftIO pollEvents >> poller
+        forkIO poller
 
-    _ <- flip runReaderT state $ unM $ do
-            initHardware
-            case startCommand of
-                Nothing -> return()
-                Just c -> void $ execLine c
-            when (debugStart args') runDebugger
-            resetNextFrame
-            loop
+        let loop = do
+--                 liftIO pollEvents
+                queue <- liftIO $ readIORef queueRef
+                when (not (null queue)) $ do
+                    let Just (queuedKey, queue') = popFront queue
+    --                 liftIO $ print queue
+                    liftIO $ writeIORef queueRef queue'
+                    let UIKey {uiKey = key, uiState = motion} = queuedKey
+                    handleKey motion key
+                loopUntil 1000
 
-    destroyWindow window
-    -- XXX Free malloced data?
-    terminate
+                loop
+
+        _ <- flip runReaderT state $ unM $ do
+                initHardware
+                case startCommand of
+                    Nothing -> return()
+                    Just c -> void $ execLine c
+                when (debugStart args') runDebugger
+                resetNextFrame
+                loop
+
+        destroyWindow window
+        -- XXX Free malloced data?
+        terminate

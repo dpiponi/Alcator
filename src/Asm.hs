@@ -14,7 +14,7 @@ import GHC.Generics
 newtype TypedIndex t = TO { unTyped :: Int } deriving (Ord, Ix, Eq, Num, Generic, Enum)
 instance Serialise (TypedIndex a)
 
-intim, p, a, x, y, s, timint, ppia0, keyboard_matrix, keyboard_row, keyboard_matrix_end :: TypedIndex Word8
+intim, p, a, x, y, s, timint, ppia0, keyboard_matrix, keyboard_row, keyboard_matrix_end, ppia2 :: TypedIndex Word8
 intim = 0
 p = 1
 a = 2
@@ -26,6 +26,7 @@ ppia0 = 14
 keyboard_row = 15
 keyboard_matrix = 16
 keyboard_matrix_end = 26
+ppia2 = 27
 
 nusiz0, nusiz1, colup0, colup1, pf0, pf1, pf2, enam0, enam1, hmp0, hmp1, hmm0, hmm1, hmbl :: TypedIndex Word8
 vblank, vsync, refp0, refp1, colupf, colubk, ctrlpf :: TypedIndex Word8

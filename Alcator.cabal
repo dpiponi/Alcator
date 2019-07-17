@@ -1,8 +1,8 @@
-name:                Stellarator
+name:                Alcator
 version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
-homepage:            https://github.com/githubuser/Stellarator#readme
+homepage:            https://github.com/githubuser/Alcator#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Author name here
@@ -29,11 +29,11 @@ library
                      , dequeue
                      , clock
                      , bytestring
+                     , dequeue
                      , vector
                      , OpenGL
                      , array
                      , bytestring
-                     , proteaaudio
                      , mtl
                      , lens
                      , binary
@@ -45,7 +45,7 @@ library
                      , serialise
   default-language:    Haskell2010
 
-executable stellarator-exe
+executable alcator
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -O -Wall -fwarn-missing-signatures
@@ -56,13 +56,13 @@ executable stellarator-exe
                      , clock
                      , dequeue
                      , bytestring
+                     , dequeue
                      , vector
                      , OpenGL
                      , array
                      , mtl
                      , lens
                      , binary
-                     , proteaaudio
                      , cmdargs
                      , monad-loops
                      , parsec
@@ -71,30 +71,11 @@ executable stellarator-exe
                      , haskeline
                      , containers
                      , OpenGL
-                     , Stellarator
+                     , Alcator
                      , serialise
+                     , directory
   default-language:    Haskell2010
  
-test-suite emu6502-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Main.hs
-  other-modules:       Intel, Vanilla
-  build-depends:       base
-                     , HUnit
-                     , array
-                     , mtl
-                     , lens
-                     , monad-loops
-                     , bytestring
-                     , binary
-                     , parsec
-                     , cmdargs
-                     , haskeline
-                     , Stellarator
-  ghc-options:         -O
-  default-language:    Haskell2010
-
 source-repository head
   type:     git
-  location: https://github.com/githubuser/Stellarator
+  location: https://github.com/dpiponi/Alcator
