@@ -166,7 +166,7 @@ connectProgramToTextures program mode current_frame_tex last_frame_tex font_tex 
     GL.currentProgram $= Just program
 
 -- | Create all OpenGL objects required including shaders and textures.
-initResources :: Float -> Ptr Word8 -> IO (GL.Program, GL.AttribLocation, GL.TextureObject, GL.TextureObject, Ptr Word8, Ptr Word8)
+initResources :: Float -> Ptr Word8 -> IO (GL.Program, GL.AttribLocation, GL.TextureObject, GL.TextureObject, Ptr Word8)
 initResources mode font_data = do
     [current_frame_tex, last_frame_tex, font_tex] <- GL.genObjectNames 3 :: IO [GL.TextureObject]
 
@@ -177,7 +177,7 @@ initResources mode font_data = do
     program <- createShaderProgram
     connectProgramToTextures program mode current_frame_tex last_frame_tex font_tex
 
-    return (program, GL.AttribLocation 0, current_frame_tex, last_frame_tex, textureData, lastTextureData)
+    return (program, GL.AttribLocation 0, current_frame_tex, last_frame_tex, textureData)
 
 -- | Render VCS screen as pair of triangles.
 draw :: Word8 -> Int -> Int -> GL.Program -> GL.AttribLocation -> IO ()

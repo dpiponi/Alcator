@@ -58,8 +58,6 @@ main = do
     print options'
     let screenScaleX' = screenScaleX options'
     let screenScaleY' = screenScaleY options'
-    -- XXX Make list of default keys
---     let Just atariKeys = keysFromOptions options'
     let controllerTypeString = controllerTypes options'
     let controllerType = read controllerTypeString
     let alpha = motionBlurAlpha options'
@@ -69,7 +67,7 @@ main = do
     queueRef <- newIORef empty
     window <- makeMainWindow screenScaleX' screenScaleY' queueRef
 
-    (prog, attrib, tex', lastTex', textureData', lastTextureData') <- initResources alpha fontData
+    (prog, attrib, tex', lastTex', textureData') <- initResources alpha fontData
 
     romArray <- newArray (0, 0x5fff) 0 :: IO (IOUArray Int Word8)
     ramArray <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
