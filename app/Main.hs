@@ -67,7 +67,7 @@ main = do
     queueRef <- newIORef empty
     window <- makeMainWindow screenScaleX' screenScaleY' queueRef
 
-    (prog, attrib, tex', lastTex', textureData') <- initResources alpha fontData
+    (prog, attrib, tex', textureData') <- initResources alpha fontData
 
     romArray <- newArray (0, 0x5fff) 0 :: IO (IOUArray Int Word8)
     ramArray <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
