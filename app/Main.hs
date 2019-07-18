@@ -97,7 +97,7 @@ main = do
                            (screenWidth*screenScaleX') (screenHeight*screenScaleY')
                            ramArray
                            romArray
-                           0x0000 window prog attrib tex' textureData' lastTextureData'
+                           0x0000 window prog attrib tex' textureData'
                            controllerType
 
         let keyCallback atomState window key someInt state mods = do

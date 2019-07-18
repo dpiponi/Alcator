@@ -977,11 +977,10 @@ initState :: Int -> Int -> Int -> Int ->
              GL.AttribLocation ->
              GL.TextureObject ->
              Ptr Word8 ->
-             Ptr Word8 ->
              Controllers ->
              IO AcornAtom
 initState xscale' yscale' width height ram'
-            rom' initialPC window prog attrib initTex initTextureData initLastTextureData controllerType = do
+            rom' initialPC window prog attrib initTex initTextureData controllerType = do
           stellaDebug' <- newIORef DebugState.start
           t <- liftIO $ getTime Realtime
           let nt = addTime t (1000000000 `div` 60)
