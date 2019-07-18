@@ -129,14 +129,15 @@ createShaderProgram = do
     return program
 
 -- | Bind textures to appropriate locations in shader program.
-connectProgramToTextures :: GL.Program -> Float -> GL.TextureObject -> GL.TextureObject -> GL.TextureObject -> IO ()
-connectProgramToTextures program mode current_frame_tex last_frame_tex font_tex = do
+connectProgramToTextures :: GL.Program -> Float -> GL.TextureObject ->
+                            GL.TextureObject -> GL.TextureObject -> IO ()
+connectProgramToTextures program mode
+                         current_frame_tex last_frame_tex font_tex = do
     GL.currentProgram $= Just program
     current_screen_tex_loc <- GL.uniformLocation program "current_frame"
-    last_screen_tex_loc <- GL.uniformLocation program "last_frame"
+--     last_screen_tex_loc <- GL.uniformLocation program "last_frame"
     font_tex_loc <- GL.uniformLocation program "table"
     mode_loc <- GL.uniformLocation program "mode"
---     print (current_screen_tex_loc, last_screen_tex_loc, font_tex_loc)
 
     GL.uniform mode_loc $= mode
 
@@ -150,11 +151,11 @@ connectProgramToTextures program mode current_frame_tex last_frame_tex font_tex 
 
     GL.activeTexture $= GL.TextureUnit 2
     GL.texture GL.Texture2D $= GL.Enabled
-    GL.textureBinding GL.Texture2D $= Just last_frame_tex
+--     GL.textureBinding GL.Texture2D $= Just last_frame_tex
 
     GL.uniform current_screen_tex_loc $= GL.Index1 (0::GL.GLint)
     GL.uniform font_tex_loc $= GL.Index1 (1::GL.GLint)
-    GL.uniform last_screen_tex_loc $= GL.Index1 (2::GL.GLint)
+--     GL.uniform last_screen_tex_loc $= GL.Index1 (2::GL.GLint)
 
     GL.validateProgram program
     status <- GL.get $ GL.validateStatus program
@@ -241,8 +242,8 @@ fsSource = BS.intercalate "\n"
                 "int f(int x) { return x+1; }",
                 "",
                 "uniform sampler2D current_frame;",
-                "uniform sampler2D last_frame;",
                 "uniform sampler2D table;",
+                "uniform sampler2D last_frame;",
                 "uniform float mode;",
                 "varying vec2 texcoord;",
                 "",
