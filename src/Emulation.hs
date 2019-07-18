@@ -970,25 +970,18 @@ rts = do
 
 initState :: Int -> Int -> Int -> Int ->
              IOUArray Int Word8 ->
-#if TRACE
-             StorableArray Int Word8 ->
-#endif
              IOUArray Int Word8 ->
              Word16 ->
              Window -> 
              GL.Program ->
              GL.AttribLocation ->
              GL.TextureObject ->
-             GL.TextureObject ->
              Ptr Word8 ->
              Ptr Word8 ->
              Controllers ->
              IO AcornAtom
 initState xscale' yscale' width height ram'
-#if TRACE
-            record'
-#endif
-            rom' initialPC window prog attrib initTex initLastTex initTextureData initLastTextureData controllerType = do
+            rom' initialPC window prog attrib initTex initTextureData initLastTextureData controllerType = do
           stellaDebug' <- newIORef DebugState.start
           t <- liftIO $ getTime Realtime
           let nt = addTime t (1000000000 `div` 60)
