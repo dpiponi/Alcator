@@ -1026,9 +1026,9 @@ initState xscale' yscale' width height ram'
               _controllers = controllerType,
               _sdlWindow = window,
               _textureData = initTextureData,
-              _lastTextureData = initLastTextureData,
+--               _lastTextureData = initLastTextureData,
               _tex = initTex,
-              _lastTex = initLastTex,
+--               _lastTex = initLastTex,
               _glProg = prog,
               _glAttrib = attrib
           }
@@ -1168,30 +1168,32 @@ dumpState = do
     dumpMemory
     dumpRegisters
 
-
 renderDisplay :: MonadAcorn ()
 renderDisplay = do
     window <- view sdlWindow
     prog <- view glProg
     attrib <- view glAttrib
     tex' <- view tex
-    lastTex' <- view lastTex
+--     lastTex' <- view lastTex
     ptr <- view textureData
-    lastPtr <- view lastTextureData
+--     lastPtr <- view lastTextureData
     windowWidth' <- view windowWidth
     windowHeight' <- view windowHeight
 --     liftIO $ print "renderDisplay"
+    --
     -- Copy 6K of video RAM
     forM_ [0..6143::Int] $ \i -> do
-        char <- readMemory (0x8000 + i16 i)
-        liftIO $ pokeElemOff ptr (fromIntegral $ i) char
+        byte <- readMemory (0x8000 + i16 i)
+        liftIO $ pokeElemOff ptr (fromIntegral $ i) byte
+
 --     liftIO $ print "renderDisplay 1"
+    -- Remove lastTex' ?
     liftIO $ updateTexture tex' ptr
-    liftIO $ updateTexture lastTex' ptr
+--     liftIO $ updateTexture lastTex' ptr
 --     (w, h) <- getFramebufferSize window
     (w, h) <- liftIO $ getWindowSize window
     mode <- load ppia0
-    let macRetinaKludge = 1 -- XXX figure this out
+    let macRetinaKludge = 2 -- XXX figure this out
     liftIO $ draw (mode .&. 0xf0) (macRetinaKludge*w) (macRetinaKludge*h) prog attrib
 --     liftIO $ print "renderDisplay 3"
 
