@@ -64,13 +64,6 @@ createImageTexture texName = do
 
 createFontTexture :: GL.TextureObject -> Ptr Word8 -> IO ()
 createFontTexture texName font_data = do
---     textureData2 <- mallocBytes (256*8*8) :: IO (Ptr Word8)
---     forM_ [0..255] $ \c ->
---         forM_ [0..8-1] $ \i ->
---             forM_ [0..8-1] $ \j -> do
---                 pokeElemOff textureData2 (fromIntegral $ c*8*8+i*8+j) (fromIntegral $ if c == 32 then 0 else 1)
---                 return ()
-
     GL.textureBinding GL.Texture2D $= Just texName
 
     GL.texImage2D
@@ -85,10 +78,6 @@ createFontTexture texName font_data = do
     GL.textureFilter   GL.Texture2D   $= ((GL.Nearest, Nothing), GL.Nearest)
     GL.textureWrapMode GL.Texture2D GL.S $= (GL.Repeated, GL.ClampToEdge)
     GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
-
---     forM_ [0..256*96-1] $ \i -> do
---         x <- peekElemOff font_data i
---         print (i, x)
 
 -- | Compile and link vertex and fragment shaders.
 createShaderProgram :: IO GL.Program
@@ -149,6 +138,7 @@ connectProgramToTextures program mode
     GL.texture GL.Texture2D $= GL.Enabled
     GL.textureBinding GL.Texture2D $= Just font_tex
 
+    -- What does this do?
     GL.activeTexture $= GL.TextureUnit 2
     GL.texture GL.Texture2D $= GL.Enabled
 --     GL.textureBinding GL.Texture2D $= Just last_frame_tex
@@ -169,7 +159,7 @@ connectProgramToTextures program mode
 -- | Create all OpenGL objects required including shaders and textures.
 initResources :: Float -> Ptr Word8 -> IO (GL.Program, GL.AttribLocation, GL.TextureObject, Ptr Word8)
 initResources mode font_data = do
-    [current_frame_tex, last_frame_tex, font_tex] <- GL.genObjectNames 3 :: IO [GL.TextureObject]
+    [current_frame_tex, font_tex] <- GL.genObjectNames 2 :: IO [GL.TextureObject]
 
     textureData <- createImageTexture current_frame_tex
     createFontTexture font_tex font_data
@@ -195,16 +185,11 @@ draw mode windowWidth windowHeight program attrib = do
     GL.uniform mode_loc $= (fromIntegral mode :: Float)
 
     GL.vertexAttribArray attrib $= GL.Enabled
---     print "Draw 2"
     V.unsafeWith vertices $ \ptr ->
         GL.vertexAttribPointer attrib $=
           (GL.ToFloat, GL.VertexArrayDescriptor 2 GL.Float 0 ptr)
---     print "Draw 3"
     GL.drawArrays GL.Triangles 0 6
---     print "Draw 3"
     GL.vertexAttribArray attrib $= GL.Disabled
---     print "Draw done"
---     SDL.glSwapWindow window
 
 vsSource, fsSource :: BS.ByteString
 vsSource = BS.intercalate "\n"
