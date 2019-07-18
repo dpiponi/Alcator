@@ -130,9 +130,9 @@ createShaderProgram = do
 
 -- | Bind textures to appropriate locations in shader program.
 connectProgramToTextures :: GL.Program -> Float -> GL.TextureObject ->
-                            GL.TextureObject -> GL.TextureObject -> IO ()
+                            GL.TextureObject -> IO ()
 connectProgramToTextures program mode
-                         current_frame_tex last_frame_tex font_tex = do
+                         current_frame_tex font_tex = do
     GL.currentProgram $= Just program
     current_screen_tex_loc <- GL.uniformLocation program "current_frame"
 --     last_screen_tex_loc <- GL.uniformLocation program "last_frame"
@@ -172,11 +172,10 @@ initResources mode font_data = do
     [current_frame_tex, last_frame_tex, font_tex] <- GL.genObjectNames 3 :: IO [GL.TextureObject]
 
     textureData <- createImageTexture current_frame_tex
-    lastTextureData <- createImageTexture last_frame_tex
     createFontTexture font_tex font_data
 
     program <- createShaderProgram
-    connectProgramToTextures program mode current_frame_tex last_frame_tex font_tex
+    connectProgramToTextures program mode current_frame_tex font_tex
 
     return (program, GL.AttribLocation 0, current_frame_tex, textureData)
 
