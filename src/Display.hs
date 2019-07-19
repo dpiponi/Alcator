@@ -16,7 +16,6 @@ import Graphics.UI.GLFW
 import Keys
 import Metrics
 import System.Exit
-import System.Exit (exitFailure)
 import System.IO
 import qualified Data.ByteString as BS
 import qualified Data.Vector.Storable as V
@@ -34,6 +33,11 @@ updateTexture texName textureData = do
         (GL.PixelData GL.Red GL.UnsignedByte textureData)
     return ()
 
+setTextureMode = do
+    GL.textureFilter   GL.Texture2D   $= ((GL.Nearest, Nothing), GL.Nearest)
+    GL.textureWrapMode GL.Texture2D GL.S $= (GL.Repeated, GL.ClampToEdge)
+    GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
+
 -- | Create OpenGL texture map to represent TV screen.
 createImageTexture :: GL.TextureObject -> IO (Ptr Word8)
 createImageTexture texName = do
@@ -44,7 +48,7 @@ createImageTexture texName = do
     -- Allocate 16K of video RAM
     -- as width 128, height 128
     forM_ [0..16383::Int] $ \i ->
-        pokeElemOff textureData (fromIntegral $ i) 0
+        pokeElemOff textureData (fromIntegral i) 0
 
     GL.textureBinding GL.Texture2D $= Just texName
     GL.texImage2D
@@ -56,9 +60,7 @@ createImageTexture texName = do
         0
         (GL.PixelData GL.Red GL.UnsignedByte textureData)
 
-    GL.textureFilter   GL.Texture2D   $= ((GL.Nearest, Nothing), GL.Nearest)
-    GL.textureWrapMode GL.Texture2D GL.S $= (GL.Repeated, GL.ClampToEdge)
-    GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
+    setTextureMode
 
     return textureData
 
@@ -76,9 +78,7 @@ createFontTexture texName font_data = do
         0
         (GL.PixelData GL.Red GL.UnsignedByte font_data)
 
-    GL.textureFilter   GL.Texture2D   $= ((GL.Nearest, Nothing), GL.Nearest)
-    GL.textureWrapMode GL.Texture2D GL.S $= (GL.Repeated, GL.ClampToEdge)
-    GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
+    setTextureMode
 
 -- | Compile and link vertex and fragment shaders.
 createShaderProgram :: IO GL.Program
@@ -304,9 +304,9 @@ fsSource = BS.intercalate "\n"
                 "        int tx = addr-128*ty;",
                 "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
                 "        int byte = int(255.0*last_index.x);",
---                 "        float z = testbit(byte, fx);",
-                "        int px = int(pow(2., float(fx)));",
-                "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
+                "        float z = testbit(byte, fx);",
+--                 "        int px = int(pow(2., float(fx)));",
+--                 "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
                 "    } else if (mode == 208.0 || true) { // 4a",
                 "        int x = int(128.*texcoord.x);",

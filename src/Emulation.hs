@@ -223,7 +223,8 @@ make32 b0 b1 b2 b3 = (i32 b3 `shift` 24)+(i32 b2 `shift` 32)+(i32 b1 `shift` 8)+
 {-# INLINABLE stringAt #-}
 stringAt :: Word16 -> MonadAcorn String
 stringAt addr = do
-    let loop cmd i = do
+    let loop :: String -> Int -> MonadAcorn String
+        loop cmd i = do
                     byte <- readMemory (addr+i16 i)
                     if byte == 0x0d || byte == 0x00
                         then return cmd
@@ -297,13 +298,13 @@ execStarCommand :: Command -> MonadAcorn ()
 execStarCommand (LOAD filename loadAddress) = do
     h <- liftIO $ openBinaryFile filename ReadMode
     bytes <- liftIO $ B.hGetContents h
+    liftIO $ hClose h
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
     liftIO $ putStrLn $ "Loading at " ++ showHex addr ""
     forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
         writeMemory i (BS.c2w d)
     liftIO $ print "Done"
-    liftIO $ hClose h
     p0 <- getPC
     putPC $ p0+2
 
@@ -313,13 +314,15 @@ execStarCommand (RUN filename) = do
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
     let exec_addr = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
-    let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
-    liftIO $ putStrLn $ "Loading at " ++ showHex addr ""
-    liftIO $ putStrLn $ "Running from " ++ showHex exec_addr ""
+--     let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
+    liftIO $ do
+      putStrLn $ "Loading at " ++ showHex addr ""
+      putStrLn $ "Running from " ++ showHex exec_addr ""
     forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
         writeMemory i (BS.c2w d)
-    liftIO $ print "Done"
-    liftIO $ hClose h
+    liftIO $ do
+      print "Done"
+      hClose h
     putPC exec_addr
 
 execStarCommand (SAVE filename startAddress relative endAddress execAddress reloadAddress) = do

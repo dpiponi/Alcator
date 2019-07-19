@@ -1,24 +1,15 @@
 module Events where
 
--- import SDL.Event
--- import SDL.Input.Keyboard
--- import Keys hiding (debugMode)
 import AcornAtom
--- import SDL.Vect
-import Emulation
--- import qualified SDL
-import Control.Monad.Reader
-import Control.Lens hiding (op)
 import Asm
--- import Data.Bits
+import Control.Lens hiding (op)
+import Control.Monad.Reader
 import Data.Bits.Lens
-import System.Exit
--- import Control.Concurrent
--- import Data.Array.Storable
 import Debugger
-import Stella
+import Emulation
 import Graphics.UI.GLFW
--- import qualified Data.Map.Strict as M
+import Stella
+import System.Exit
 
 {- INLINE isPressed -}
 isPressed :: KeyState -> Bool
@@ -100,19 +91,16 @@ atom_keyboard = [
     (Key'Space, ([9], 0))]
 
 updatePPIA :: Key -> Bool -> MonadAcorn Bool
-updatePPIA key pressed = do
-    let op = lookup key atom_keyboard
-    case op of
+updatePPIA key pressed =
+    case lookup key atom_keyboard of
         Nothing -> return False
         Just (rows, column) -> do
             forM_ rows $ \row -> do
                 modify (keyboard_matrix + TO row) $ bitAt column .~ not pressed
             return True
---                 liftIO $ print (row, column, pressed)
 
 updateRept :: Bool -> MonadAcorn ()
-updateRept pressed = do
-    modify ppia2 $ bitAt 6 .~ pressed
+updateRept pressed = modify ppia2 $ bitAt 6 .~ pressed
 
 -- Handle keys to Alcator rather than keys for emulated machine
 handleKey :: KeyState -> Key -> MonadAcorn ()
