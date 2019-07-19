@@ -11,7 +11,6 @@ import Graphics.UI.GLFW
 import Stella
 import System.Exit
 
-{- INLINE isPressed -}
 isPressed :: KeyState -> Bool
 isPressed KeyState'Pressed = True
 isPressed KeyState'Repeating = True -- I don't know!
@@ -95,7 +94,7 @@ updatePPIA key pressed =
     case lookup key atom_keyboard of
         Nothing -> return False
         Just (rows, column) -> do
-            forM_ rows $ \row -> do
+            forM_ rows $ \row ->
                 modify (keyboard_matrix + TO row) $ bitAt column .~ not pressed
             return True
 
@@ -107,7 +106,7 @@ handleKey :: KeyState -> Key -> MonadAcorn ()
 handleKey motion key = do
     let pressed = isPressed motion
     case key of
-      Key'GraveAccent -> liftIO $ exitSuccess
+      Key'GraveAccent -> liftIO exitSuccess
       Key'LeftAlt     -> when pressed $ do
                               Emulation.dumpState
                               runDebugger

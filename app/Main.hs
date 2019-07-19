@@ -1,8 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE GADTs #-}
@@ -62,7 +60,7 @@ main = do
     let alpha = motionBlurAlpha options'
 
     rc <- init -- init video
-    when (not rc) $ die "Couldn't init graphics"
+    unless rc $ die "Couldn't init graphics"
     queueRef <- newIORef empty
     window <- makeMainWindow screenScaleX' screenScaleY' queueRef
 
@@ -112,7 +110,7 @@ main = do
                       Key'RightAlt -> updateRept pressed
                       _ -> do
                           done <- updatePPIA key pressed
-                          when (not done) $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
+                          unless done $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
         setKeyCallback window (Just (keyCallback state))
 
         --  Not at all clear this should work with GLFW
@@ -122,7 +120,7 @@ main = do
 
         let loop = do
                 queue <- liftIO $ readIORef queueRef
-                when (not (null queue)) $ do
+                unless (null queue) $ do
                     let Just (queuedKey, queue') = popFront queue
                     liftIO $ writeIORef queueRef queue'
                     let UIKey {uiKey = key, uiState = motion} = queuedKey

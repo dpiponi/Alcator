@@ -138,8 +138,7 @@ cpy mode = do
 -- {-# INLINABLE txs #-}
 txs :: MonadAcorn ()
 txs = do
-    tick 1
-    discard $ getPC >>= readMemory
+    discard $ getPC >>= readMemoryTick
     getX >>= putS
 
 -- 2 clock cycles
@@ -147,34 +146,21 @@ txs = do
 tra :: MonadAcorn Word8 -> (Word8 -> MonadAcorn ()) ->
        MonadAcorn ()
 tra getReg putReg = do
-    tick 1
-    discard $ getPC >>= readMemory
+    discard $ getPC >>= readMemoryTick
     getReg >>= setNZ >>= putReg
 
 -- 2 clock cycles
 -- {-# INLINABLE inr #-}
 inr :: MonadAcorn Word8 -> (Word8 -> MonadAcorn ()) -> MonadAcorn ()
 inr getReg putReg = do
-    tick 1
-    discard $ getPC >>= readMemory
---     v0 <- getReg
---     let v1 = v0+1
---     discard $ setNZ v1
---     putReg v1
---     getReg >>= return . (+ 1) >>= setNZ >>= putReg
+    discard $ getPC >>= readMemoryTick
     getReg & fmap (+ 1) >>= setNZ >>= putReg
 
 -- 2 clock cycles
 -- {-# INLINABLE der #-}
 der :: MonadAcorn Word8 -> (Word8 -> MonadAcorn ()) -> MonadAcorn ()
 der getReg putReg = do
-    tick 1
-    discard $ getPC >>= readMemory
---     v0 <- getReg
---     let v1 = v0-1
---     discard $ setNZ v1
---     putReg v1
---     getReg >>= return . (subtract 1) >>= setNZ >>= putReg
+    discard $ getPC >>= readMemoryTick
     getReg & fmap (subtract 1) >>= setNZ >>= putReg
 
 -- {-# INLINABLE ora #-}
@@ -185,7 +171,6 @@ ora mode = do
     let newA = oldA .|. src
     putA newA
     setNZ_ newA
---     getA & fmap (.|. src) 
 
 -- {-# INLINABLE and #-}
 and :: MonadAcorn Word8 -> MonadAcorn ()

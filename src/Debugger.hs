@@ -39,18 +39,18 @@ arith operator expr0 expr1 = do
         _ -> return EFail
 
 eval :: Expr -> MonadAcorn Value
-eval A = EInt <$> fromIntegral <$> getA
-eval X = EInt <$> fromIntegral <$> getX
-eval Y = EInt <$> fromIntegral <$> getY
-eval PC = EInt <$> fromIntegral <$> getPC
-eval DebugCmd.S = EInt <$> fromIntegral <$> getS
+eval A = EInt . fromIntegral <$> getA
+eval X = EInt . fromIntegral <$> getX
+eval Y = EInt . fromIntegral <$> getY
+eval PC = EInt . fromIntegral <$> getPC
+eval DebugCmd.S = EInt . fromIntegral <$> getS
 eval DebugCmd.EQ = EBool <$> getZ
-eval NE = EBool <$> not <$> getZ
+eval NE = EBool . not <$> getZ
 eval CS = EBool <$> getC
-eval CC = EBool <$> not <$> getC
+eval CC = EBool . not <$> getC
 eval MI = EBool <$> getN
-eval PL = EBool <$> not <$> getN
-eval DebugCmd.Clock = EInt <$> fromIntegral <$> useClock id
+eval PL = EBool . not <$> getN
+eval DebugCmd.Clock = EInt . fromIntegral <$> useClock id
 
 eval (Var name) = do
     v <- useAtomDebug variables
@@ -84,7 +84,7 @@ eval (Plus value0 value1) = arith (+) value0 value1
 eval (Times value0 value1) = arith (*) value0 value1
 eval (Div value0 value1) = arith div value0 value1
 eval (Minus value0 value1) = arith (-) value0 value1
-eval (LeftShift value0 value1) = arith (shift) value0 value1
+eval (LeftShift value0 value1) = arith shift value0 value1
 eval (RightShift value0 value1) = arith (shift . negate) value0 value1
 
 eval (PeekByte expr) = do
@@ -146,7 +146,7 @@ execCommand cmd =
             modifyAtomDebug variables $ Map.insert var e'
             _ <- useAtomDebug variables
             return KeepDebugging
-        Block cmds -> do
+        Block cmds ->
             loop KeepDebugging cmds where
                 loop Continue      _        = return Continue
                 loop KeepDebugging []       = return KeepDebugging
@@ -186,8 +186,7 @@ execRepeat :: Expr -> Command -> MonadAcorn DebugAction
 execRepeat n repeatedCmd = do
     n' <- eval n
     case n' of
-        EInt n'' -> do
-            replicateM_ n'' (execCommand repeatedCmd)
+        EInt n'' -> replicateM_ n'' (execCommand repeatedCmd)
         _ -> return ()
     return KeepDebugging
 
@@ -209,7 +208,6 @@ execLoad filexp = do
           handle <- liftIO $ openBinaryFile filename ReadMode
           contents <- liftIO $ hGetContents handle
           liftIO $ hClose handle
---           contents <- loadBinary filename
           let romSize = length contents
 
           let addr = ord (contents!!16) + ord (contents!!17)*256
@@ -217,8 +215,8 @@ execLoad filexp = do
           liftIO $ putStrLn $ "addr = " ++ showHex addr ""
 
           forM_ (zip [0..] contents) $ \(i, c) -> do -- Stupid me, I need to lose 1st 22 chars!
-                liftIO $ print (showHex (i-0) "", showHex (ord c) "")
-                writeMemory (i-0+fromIntegral addr) (fromIntegral (ord c))
+                liftIO $ print (showHex i "", showHex (ord c) "")
+                writeMemory (i+fromIntegral addr) (fromIntegral (ord c))
 
         _ -> return ()
 
@@ -311,10 +309,8 @@ execLine :: String -> MonadAcorn ()
 execLine line =  do
   let cmd = parse parseCommands "" line
   case cmd of
-      Right cmd' -> do
-          void $ execCommand cmd'
-      Left e -> do
-          liftIO $ print e
+      Right cmd' -> void $ execCommand cmd'
+      Left e -> liftIO $ print e
 
 runDebugger :: MonadAcorn ()
 runDebugger = do

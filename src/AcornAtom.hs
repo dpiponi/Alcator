@@ -192,7 +192,7 @@ frozen AcornAtom {
 
 copyArray :: (MArray a e m, Ix i, Num i, Enum i) =>
                    a i e -> [e] -> m ()
-copyArray mut imm = zipWithM_ (writeArray mut) [0..] imm
+copyArray mut = zipWithM_ (writeArray mut) [0..]
 
 thawInto :: AcornAtom -> SerialisableAcornAtom -> IO ()
 thawInto AcornAtom {

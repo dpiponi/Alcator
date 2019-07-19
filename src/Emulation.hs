@@ -1,8 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE BlockArguments #-}
 
@@ -31,6 +28,7 @@ module Emulation(
                  readIndX,
                  readIndY,
                  readMemory,
+                 readMemoryTick,
                  readZeroPage,
                  readZeroPage,
                  readZeroPageX,
@@ -59,52 +57,45 @@ module Emulation(
                  writeZeroPageY
                 ) where
 
-import Asm hiding (a, s, x)
 import AcornAtom
+import Asm hiding (a, s, x)
+import CPU
+import Control.Concurrent
 import Control.Lens hiding (set, op, index, noneOf)
 import Control.Monad.Reader
-import Data.Maybe
-import Data.Char
-import System.IO
 import Data.Array.IO hiding (index)
 import Data.Bits hiding (bit)
 import Data.ByteString hiding (putStrLn, putStr, index)
-import Foreign.Ptr
-import Text.Printf
-import Foreign.Storable
-import Text.Parsec
+import Data.Char
 import Data.IORef
 import Data.Int
-import CPU
+import Data.Maybe
 import Data.Word
 import DebugState
-import Control.Concurrent
 import Disasm hiding (make16)
 import Display
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import Foreign.Ptr
-import Stella
+import Foreign.Storable
+import Graphics.UI.GLFW hiding (getTime)
 import Memory
 import Metrics
 import Numeric
 import Prelude hiding (last, and)
+import Stella
 import System.Clock
+import System.IO
+import Text.Parsec
+import Text.Printf
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import qualified Graphics.Rendering.OpenGL as GL
-import Graphics.UI.GLFW hiding (getTime)
-#if TRACE
-import Data.Array.Storable
-#endif
 
 readMemory :: Word16 -> MonadAcorn Word8
 illegal :: Word8 -> MonadAcorn ()
 
 -- {-# INLINE readMemory #-}
-readMemory addr' = do
-    let addr = addr'
-    byte <- pureReadMemory (memoryType addr) addr
-
-    return byte
+-- readMemory addr = pureReadMemory (memoryType addr) addr
+readMemory addr = pureReadMemory (memoryType addr) addr
 
 -- {-# INLINE writeMemory #-}
 writeMemory :: Word16 -> Word8 -> MonadAcorn ()
@@ -122,8 +113,7 @@ tick :: Int -> MonadAcorn ()
 tick n = do
     modifyClock id (+ fromIntegral n)
     c <- useClock id -- XXXXXXXXXXXXXXXXXXXXXX
-    when (c `mod` 16667 == 0) $ do
-        renderDisplay
+    when (c `mod` 16667 == 0) renderDisplay
 
 -- {-# INLINE debugStr #-}
 debugStr _ _ = return ()
@@ -139,7 +129,7 @@ writeWord32 i w = do
     writeMemory (i+3) (fromIntegral $ w `shift` (-24))
 
 hostFileName :: String -> MonadAcorn String
-hostFileName name = return name
+hostFileName = return 
 
 saveBlock :: Word16 -> String -> MonadAcorn ()
 saveBlock blockAddr hostName = do
@@ -175,15 +165,10 @@ data Command = LOAD String Int -- <-- XXX needs to me Maybe Int
              | SAVE String Int Bool Int Int Int
              | RUN String -- XXX pass args
 
--- decimal :: ParsecT String u Identity Int
--- decimal = do
---     digits <- many1 digit
---     return $ read digits
-
 number :: Stream s m t => Int -> ParsecT s u m Char -> ParsecT s u m Int
 number base baseDigit
     = do { digits <- many1 baseDigit
-         ; let n = Prelude.foldl (\x d -> base*x + (digitToInt d)) 0 digits
+         ; let n = Prelude.foldl (\x d -> base*x + digitToInt d) 0 digits
          ; seq n (return n)
          }
 
@@ -191,7 +176,7 @@ filename_literal :: ParsecT String u Identity String
 filename_literal = (char '"' >> (many1 (noneOf "\"") <* char '"'))
            <|> many1 (noneOf " ")
 
-ignoreCase :: Stream s m Char => [Char] -> ParsecT s u m [Char]
+ignoreCase :: Stream s m Char => String -> ParsecT s u m String
 ignoreCase [] = return []
 ignoreCase (c : cs) | isUpper c = do
     m <- char (toLower c) <|> char c
@@ -248,7 +233,7 @@ word32At addr = make32 <$>
 {-# INLINE putWord32 #-}
 putWord32 :: Word16 -> Word32 -> MonadAcorn ()
 putWord32 addr w = do
-    writeMemory addr (i8 $ w)
+    writeMemory addr (i8 w)
     writeMemory (addr+1) (i8 (w `shift` (-8)))
     writeMemory (addr+2) (i8 (w `shift` (-16)))
     writeMemory (addr+3) (i8 (w `shift` (-24)))
@@ -302,11 +287,6 @@ loadBinary filename = liftIO $ do
 
 execStarCommand :: Command -> MonadAcorn ()
 execStarCommand (LOAD filename loadAddress) = do
---     bytes <- liftIO $ do
---       h <- liftIO $ openBinaryFile filename ReadMode
---       bytes' <- B.hGetContents h
---       hClose h
---       return bytes'
 
     bytes <- loadBinary filename
     let bytes' = B.unpack $ B.take 22 bytes
@@ -330,10 +310,9 @@ execStarCommand (RUN filename) = do
     liftIO $ do
       putStrLn $ "Loading at " ++ showHex addr ""
       putStrLn $ "Running from " ++ showHex exec_addr ""
-    forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
+    forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) ->
         writeMemory i (BS.c2w d)
-    liftIO $ do
-      print "Done"
+    liftIO $ print "Done"
     putPC exec_addr
 
 execStarCommand (SAVE filename startAddress relative endAddress execAddress reloadAddress) = do
@@ -433,14 +412,13 @@ read16zpTick addr = make16 <$>
 writeIndX :: Word8 -> MonadAcorn ()
 writeIndX src = do
     index <- getX
-    addr <- getPC >>= readMemoryTick
+    addr <- fetchByteTick
 
     discard $ readMemoryTick (i16 addr)
 
     addrX <- read16zpTick (addr+index)
 
-    tick 1
-    writeMemory addrX src
+    writeMemoryTick addrX src
     incPC
 
 -- 3 clock cycles
@@ -449,8 +427,7 @@ writeZeroPage :: Word8 -> MonadAcorn ()
 writeZeroPage src = do
     addr <- fetchByteTick
 
-    tick 1
-    writeMemory (i16 addr) src
+    writeMemoryTick (i16 addr) src
     incPC
 
 -- 4 clock cycles
@@ -459,8 +436,7 @@ writeAbs :: Word8 -> MonadAcorn()
 writeAbs src = do
     addr <- getPC >>= read16tick
 
-    tick 1
-    writeMemory addr src
+    writeMemoryTick addr src
     addPC 2
 
 -- 6 clock cycles
@@ -476,8 +452,7 @@ writeIndY src = do
 
     discard $ readMemoryTick halfAddrY
 
-    tick 1
-    writeMemory addrY src
+    writeMemoryTick addrY src
     incPC
 
 fetchByteTick :: MonadAcorn Word8
@@ -490,10 +465,9 @@ writeZeroPageX src = do
     index <- getX
     addr <- fetchByteTick
 
-    discard $ readMemoryTick (i16 addr)
+    discard $ readZpTick addr
 
-    tick 1
-    writeMemory (i16 $ addr+index) src
+    writeMemoryTick (i16 $ addr+index) src
     incPC
 
 -- 4 clock cycles
@@ -505,8 +479,7 @@ writeZeroPageY src = do
 
     discard $ readZpTick addr
 
-    tick 1
-    writeMemory (i16 $ addr+index) src
+    writeMemoryTick (i16 $ addr+index) src
     incPC
 
 -- 5 clock cycles
@@ -519,8 +492,7 @@ writeAbsY src = do
     let (halfAddrY, addrY) = halfSum addr index
     discard $ readMemoryTick halfAddrY
 
-    tick 1
-    writeMemory addrY src
+    writeMemoryTick addrY src
     addPC 2
 
 -- 5 clock cycles
@@ -533,31 +505,26 @@ writeAbsX src = do
     let (halfAddrX, addrX) = halfSum addr index
     discard $ readMemoryTick halfAddrX
 
-    tick 1
-    writeMemory addrX src
+    writeMemoryTick addrX src
     addPC 2
 
 -- 6 clock cycles
 -- {-# INLINABLE readIndX #-}
 readIndX :: MonadAcorn Word8
 readIndX = do
-    tick 1
     index <- getX
-    addr0 <- getPC >>= readMemory
+    addr0 <- fetchByteTick
 
     discard $ readZpTick addr0
-
-    addr1 <- read16zpTick (addr0+index)
-
     incPC
-    readMemoryTick addr1
+
+    read16zpTick (addr0+index) >>= readMemoryTick
 
 -- 3 clock cycles
 -- {-# INLINABLE readZeroPage #-}
 readZeroPage :: MonadAcorn Word8
 readZeroPage = do
     addr <- fetchByteTick
-
     incPC
     readZpTick addr
 
@@ -565,8 +532,7 @@ readZeroPage = do
 -- {-# INLINABLE readImm #-}
 readImm :: MonadAcorn Word8
 readImm = do
-    tick 1
-    src <- getPC >>= readMemory
+    src <- fetchByteTick
     incPC
     return src
 
@@ -576,9 +542,8 @@ readImm = do
 readAbs :: MonadAcorn Word8
 readAbs = do
     p0 <- getPC
-    src <- (read16tick p0 <* tick 1) >>= readMemory
     addPC 2
-    return src
+    read16tick p0 >>= readMemoryTick
 
 -- 5-6 clock cycles
 -- {-# INLINABLE readIndY #-}
@@ -591,16 +556,15 @@ readIndY = do
 
     when (halfAddrY /= addrY) $ discard $ readMemoryTick halfAddrY
 
-    src <- readMemoryTick addrY
     incPC
-    return src
+    readMemoryTick addrY
 
 -- 4 clock cycles
 -- {-# INLINABLE readZeroPageX #-}
 readZeroPageX :: MonadAcorn Word8
 readZeroPageX = do
     index <- getX
-    addr <- getPC >>= readMemoryTick
+    addr <- fetchByteTick
 
     discard $ readZpTick addr -- wraps
 
@@ -638,7 +602,7 @@ readAbsY :: MonadAcorn Word8
 readAbsY = do
     index <- getY
     addr <- getPC >>= read16tick
-    addPC 2
+    addPC 2 -- XXX suspicious
 
     let (halfAddrY, addrY) = halfSum addr index
     when ( halfAddrY /= addrY) $ discard $ readMemoryTick halfAddrY
@@ -649,8 +613,7 @@ readAbsY = do
 -- {-# INLINABLE bra #-}
 bra :: MonadAcorn Bool -> Bool -> MonadAcorn ()
 bra getFlag value = do
-    tick 1
-    offset <- getPC >>= readMemory
+    offset <- fetchByteTick
     f <- getFlag
     incPC
 
@@ -665,9 +628,7 @@ bra getFlag value = do
 -- 2 clock cycles
 -- {-# INLINABLE set #-}
 set :: (Bool -> MonadAcorn ()) -> Bool -> MonadAcorn ()
-set putFlag value = do
-    spinPC
-    putFlag value
+set putFlag value = spinPC >> putFlag value
 
 -- 2 clock cycles
 -- {-# INLINABLE nop #-}
@@ -705,26 +666,18 @@ uselessly = id
 -- {-# INLINABLE withZeroPage #-}
 withZeroPage :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
 withZeroPage op = do
-    tick 1
-    addr <- getPC >>= readMemory
-
+    addr <- fetchByteTick
     src <- readMemoryTick (i16 addr)
 
-    tick 1
-    uselessly $ writeMemory (i16 addr) src
+    uselessly $ writeMemoryTick (i16 addr) src
 
-    tick 1
-    op src >>= writeMemory (i16 addr)
+    op src >>= writeMemoryTick (i16 addr)
     incPC
 
 -- 2 clock cycles
 -- {-# INLINABLE withAcc #-}
 withAcc :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
-withAcc op = do
---     tick 1
---     discard $ getPC >>= readMemory
-    spinPC
-    getA >>= op >>= putA
+withAcc op = spinPC >> getA >>= op >>= putA
 
 -- 6 clock cycles
 -- {-# INLINE withAbs #-}
@@ -734,31 +687,27 @@ withAbs op = do
     
     src <- readMemoryTick addr
 
-    tick 1
-    uselessly $ writeMemory addr src
+    uselessly $ writeMemoryTick addr src
 
-    tick 1
     dst <- op src
-    addPC 2
-    writeMemory addr dst
+    addPC 2 -- XXX suspicious
+    writeMemoryTick addr dst
 
 -- 6 clock cycles
 withZeroPageX :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
 withZeroPageX op = do
     index <- getX
-    addr <- getPC >>= readMemoryTick
+    addr <- fetchByteTick
     let addrX = addr+index
 
     discard $ readMemoryTick (i16 addr)
 
     src <- readMemoryTick (i16 addrX)
 
-    tick 1
-    writeMemory (i16 addrX) src
+    uselessly $ writeMemoryTick (i16 addrX) src
 
-    tick 1
     dst <- op src
-    writeMemory (i16 addrX) dst
+    writeMemoryTick (i16 addrX) dst
     incPC
  
 -- 7 clock cycles
@@ -775,13 +724,11 @@ withAbsX op = do
 
     src <- readMemoryTick addrX
 
-    tick 1
-    uselessly $ writeMemory addrX src
+    uselessly $ writeMemoryTick addrX src
 
-    tick 1
     addPC 2
     dst <- op src
-    writeMemory addrX dst
+    writeMemoryTick addrX dst
 
 -- 7 clock cycles
 -- {-# INLINABLE brk #-}
@@ -793,17 +740,14 @@ brk = do
 
     p1 <- getPC
     incPC
-    tick 1
-    push $ hi p1
+    pushTick $ hi p1
 
     incPC
-    tick 1
-    push $ lo p1
+    pushTick $ lo p1
 
     putB True
     incPC
-    tick 1
-    getP >>= push . (.|. 0x20) -- always on bit
+    getP >>= pushTick . (.|. 0x20) -- always on bit
     putI True
 
     read16tick 0xfffe >>= putPC -- irq/brk XXX
@@ -815,15 +759,12 @@ irq :: MonadAcorn ()
 irq = do
     fi <- getI
     unless fi $ nmi False
---     if not fi
---         then nmi False
---         else return ()
 
--- {-# INLINABLE push #-}
-push :: Word8 -> MonadAcorn ()
-push v = do
+-- {-# INLINABLE pushTick #-}
+pushTick :: Word8 -> MonadAcorn ()
+pushTick v = do
     sp <- getS
-    writeMemory (0x100+i16 sp) v
+    writeMemoryTick (0x100+i16 sp) v
     putS (sp-1)
 
 -- {-# INLINABLE pullTick #-}
@@ -832,105 +773,71 @@ pullTick = do
     sp <- getS
     let sp' = sp+1
     putS sp'
-    readMemoryTick (0x100+i16 sp')
+    readMemoryTick (0x100+i16 sp') -- XXX make wrap
 
 spinPC :: MonadAcorn ()
-spinPC = do
-    tick 1
-    discard $ getPC >>= readMemory
+spinPC = discard fetchByteTick
 
 -- 3 clock cycles
 -- {-# INLINABLE pha #-}
 pha :: MonadAcorn ()
-pha = do
-    spinPC
-
-    tick 1
-    getA >>= push
+pha = spinPC >> getA >>= pushTick
 
 -- 3 clock cycles
 -- {-# INLINABLE php #-}
 php :: MonadAcorn ()
-php = do
---     tick 1
---     discard $ getPC >>= readMemory
-    spinPC
-
-    tick 1
-    getP >>= push . (.|. 0x30)
+php = spinPC >> getP >>= pushTick . (.|. 0x30)
 
 spinS :: MonadAcorn ()
 spinS = do
-    tick 1
     s <- getS
-    discard $ readMemory (0x100+i16 s)
+    discard $ readMemoryTick (0x100+i16 s)
 
 pulP :: MonadAcorn ()
-pulP = do
-    spinS
-    pullTick >>= putP
+pulP = spinS >> pullTick >>= putP
 
 -- 4 clock cycles
 -- {-# INLINABLE plp #-}
 plp :: MonadAcorn ()
-plp = do
-    spinPC
-    pulP
+plp = spinPC >> pulP
 
 -- 4 clock cycles
 -- {-# INLINABLE pla #-}
 pla :: MonadAcorn ()
-pla = do
-    spinPC
-    spinS
-
-    pullTick >>= setNZ >>= putA
+pla = spinPC >> spinS >> pullTick >>= setNZ >>= putA
 
 -- {-# INLINABLE nmi #-}
 nmi :: Bool -> MonadAcorn ()
 nmi sw = do
     p0 <- getPC
-    push $ hi p0
-    push $ lo p0
+    pushTick $ hi p0
+    pushTick $ lo p0
     putB sw
-    getP >>= push . (.|. 0x20) -- always on bit
+    getP >>= pushTick . (.|. 0x20) -- always on bit
     putI True
     read16 0xfffe >>= putPC -- irq/brk XXX
-    tick 7
+    tick 4
 
 -- 6 clock cycles
 -- {-# INLINABLE rti #-}
 rti :: MonadAcorn ()
-rti = do
---     tick 1
---     p0 <- getPC
---     void $ readMemory p0
-    spinPC
-    pulP
-
-    make16 <$> pullTick <*> pullTick >>= putPC
+rti = spinPC >> pulP >> make16 <$> pullTick <*> pullTick >>= putPC
 
 -- 6 clock cycles
 -- {-# INLINABLE jsr #-}
 jsr :: MonadAcorn ()
 jsr = do
-    tick 1
-    p0 <- getPC
-    pcl <- readMemory p0
+    pcl <- fetchByteTick
     incPC
 
     spinS
 
     p2 <- getPC
 
-    tick 1
-    push $ hi p2
+    pushTick $ hi p2
+    pushTick $ lo p2
 
-    tick 1
-    push $ lo p2
-
-    tick 1
-    pch <- readMemory p2
+    pch <- readMemoryTick p2
 
     putPC $ make16 pcl pch
 
@@ -939,16 +846,11 @@ jsr = do
 rts :: MonadAcorn ()
 rts = do
     spinPC
-
---     tick 1
---     s <- getS
---     discard $ readMemory (0x100+i16 s)
     spinS
 
     p0 <- make16 <$> pullTick <*> pullTick
     
-    tick 1
-    discard $ readMemory p0
+    discard $ readMemoryTick p0
     putPC (p0+1)
 
 initState :: IOUArray Int Word8 ->
