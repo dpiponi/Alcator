@@ -4,12 +4,14 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE BlockArguments #-}
 
 module Emulation(
                  brk,
                  displayChars,
                  dumpMemory,
                  dumpState,
+                 loadBinary,
                  illegal,
                  incPC,
                  jmp,
@@ -156,27 +158,25 @@ loadFile blockAddr hostName = do
     execAddr32 <- word32At (blockAddr+0x6)
     startData32 <- word32At (blockAddr+0xa)
     addressType <- readMemory (blockAddr+0x6)
+
     -- If caller-specified execution address ends in zero
     -- use user-specified load address
     -- otherwise use load address in file
-    let start = fromIntegral loadAddr32
-    h <- liftIO $ openBinaryFile hostName ReadMode
-    bytes <- liftIO $ B.hGetContents h
+    let start_address = fromIntegral loadAddr32
+    bytes <- loadBinary hostName
     let len = B.length bytes
-    let end = start+fromIntegral len
-    liftIO $ putStr $ printf " Load %04x:%04x from '%s'" start end hostName
-    forM_ (Prelude.zip [start..end-1] (Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> writeMemory i (BS.c2w d)
-    liftIO $ print "Done"
-    liftIO $ hClose h
+    let end = start_address+fromIntegral len
+    liftIO $ putStr $ printf " Load %04x:%04x from '%s'" start_address end hostName
+    forM_ (Prelude.zip [start_address..end-1] (Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> writeMemory i (BS.c2w d)
 
 data Command = LOAD String Int -- <-- XXX needs to me Maybe Int
              | SAVE String Int Bool Int Int Int
              | RUN String -- XXX pass args
 
-decimal :: ParsecT String u Identity Int
-decimal = do
-    digits <- many1 digit
-    return $ read digits
+-- decimal :: ParsecT String u Identity Int
+-- decimal = do
+--     digits <- many1 digit
+--     return $ read digits
 
 number :: Stream s m t => Int -> ParsecT s u m Char -> ParsecT s u m Int
 number base baseDigit
@@ -293,28 +293,38 @@ osfile = do
 
         _ -> error $ "Unknown OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y
 
+loadBinary :: String -> MonadAcorn B.ByteString
+loadBinary filename = liftIO $ do
+    h <- openBinaryFile filename ReadMode
+    B.hGetContents h <* hClose h
 
 execStarCommand :: Command -> MonadAcorn ()
 execStarCommand (LOAD filename loadAddress) = do
-    h <- liftIO $ openBinaryFile filename ReadMode
-    bytes <- liftIO $ B.hGetContents h
-    liftIO $ hClose h
+--     bytes <- liftIO $ do
+--       h <- liftIO $ openBinaryFile filename ReadMode
+--       bytes' <- B.hGetContents h
+--       hClose h
+--       return bytes'
+
+    bytes <- loadBinary filename
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
     liftIO $ putStrLn $ "Loading at " ++ showHex addr ""
-    forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
+    forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) ->
         writeMemory i (BS.c2w d)
     liftIO $ print "Done"
     p0 <- getPC
     putPC $ p0+2
 
 execStarCommand (RUN filename) = do
-    h <- liftIO $ openBinaryFile filename ReadMode
-    bytes <- liftIO $ B.hGetContents h
+--     h <- liftIO $ openBinaryFile filename ReadMode
+--     bytes <- liftIO $ B.hGetContents h
+--     liftIO $ hClose h
+
+    bytes <- loadBinary filename
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
     let exec_addr = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
---     let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
     liftIO $ do
       putStrLn $ "Loading at " ++ showHex addr ""
       putStrLn $ "Running from " ++ showHex exec_addr ""
@@ -322,7 +332,6 @@ execStarCommand (RUN filename) = do
         writeMemory i (BS.c2w d)
     liftIO $ do
       print "Done"
-      hClose h
     putPC exec_addr
 
 execStarCommand (SAVE filename startAddress relative endAddress execAddress reloadAddress) = do
@@ -1043,8 +1052,7 @@ pureReadMemory PPIA addr = do
         0xb000 -> load ppia0
         0xb001 -> do
             row <- load keyboard_row
-            bits <- load (keyboard_matrix + fromIntegral row)
-            return bits
+            load (keyboard_matrix + fromIntegral row)
 
 --        Port C - #B002
 --        Output bits:      Function:
@@ -1070,10 +1078,9 @@ pureReadMemory PPIA addr = do
 --          -- NTSC vertical blanking 1333us
             ppia2' <- load ppia2
             let someBits = ppia2' `xor` 0x40
-            let bits = if s < 1333
-                        then someBits
-                        else someBits .|. 0x80
-            return bits
+            return if s < 1333
+              then someBits
+              else someBits .|. 0x80
         _ -> return 0
     return bits
 pureReadMemory VIA _ = return 0
@@ -1095,7 +1102,7 @@ translateChar _ = '.'
 
 -- {-# INLINE pureWriteMemory #-}
 pureWriteMemory :: MemoryType -> Word16 -> Word8 -> MonadAcorn ()
-pureWriteMemory PPIA addr v = do
+pureWriteMemory PPIA addr v =
     case addr of
         0xb000 -> do
             store ppia0 v
@@ -1117,13 +1124,14 @@ dumpMemory = do
     b0 <- readMemory regPC
     b1 <- readMemory (regPC+1)
     b2 <- readMemory (regPC+2)
-    liftIO $ putStr $ "PC = " ++ showHex regPC ""
-    liftIO $ putStr $ "(PC) = "
-    liftIO $ putStr $ showHex b0 "" ++ " "
-    liftIO $ putStr $ showHex b1 "" ++ " "
-    liftIO $ putStrLn $ showHex b2 ""
+    liftIO $ do
+      putStr $ "PC = " ++ showHex regPC ""
+      putStr   "(PC) = "
+      putStr $ showHex b0 "" ++ " "
+      putStr $ showHex b1 "" ++ " "
+      putStrLn $ showHex b2 ""
     let (_, mne, _) = disasm regPC [b0, b1, b2]
-    liftIO $ putStrLn $ mne
+    liftIO $ putStrLn mne
 
 -- {-# INLINABLE dumpRegisters #-}
 dumpRegisters :: MonadAcorn ()
@@ -1135,10 +1143,10 @@ dumpRegisters = do
         putStr $ " flags = " ++ showHex regP ""
         putStr $ "(N=" ++ showHex ((regP `shift` (-7)) .&. 1) ""
         putStr $ ",V=" ++ showHex ((regP `shift` (-6)) .&. 1) ""
-        putStr $ ",B=" ++ showHex (regP `shift` ((-4)) .&. 1) ""
-        putStr $ ",D=" ++ showHex (regP `shift` ((-3)) .&. 1) ""
-        putStr $ ",I=" ++ showHex (regP `shift` ((-2)) .&. 1) ""
-        putStr $ ",Z=" ++ showHex (regP `shift` ((-1)) .&. 1) ""
+        putStr $ ",B=" ++ showHex (regP `shift` (-4) .&. 1) ""
+        putStr $ ",D=" ++ showHex (regP `shift` (-3) .&. 1) ""
+        putStr $ ",I=" ++ showHex (regP `shift` (-2) .&. 1) ""
+        putStr $ ",Z=" ++ showHex (regP `shift` (-1) .&. 1) ""
         putStr $ ",C=" ++ showHex (regP .&. 1) ""
     regA <- getA 
     liftIO $ putStr $ ") A = " ++ showHex regA ""
@@ -1166,7 +1174,7 @@ renderDisplay = do
     -- Copy 6K of video RAM
     forM_ [0..6143::Int] $ \i -> do
         byte <- readMemory (0x8000 + i16 i)
-        liftIO $ pokeElemOff ptr (fromIntegral $ i) byte
+        liftIO $ pokeElemOff ptr (fromIntegral i) byte
 
     liftIO $ updateTexture tex' ptr
     (w', h') <- liftIO $ getFramebufferSize window
@@ -1195,7 +1203,7 @@ waitUntilNextFrameDue = do
 initHardware :: MonadAcorn ()
 initHardware = do
     -- Clear keyboard
-    forM_ [0..9::Int] $ \i -> do
+    forM_ [0..9::Int] $ \i ->
         store (keyboard_matrix + fromIntegral i) 0xff
     pclo <- readMemory 0xfffc
     pchi <- readMemory 0xfffd

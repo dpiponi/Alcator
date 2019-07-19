@@ -208,6 +208,8 @@ execLoad filexp = do
         EString filename -> do
           handle <- liftIO $ openBinaryFile filename ReadMode
           contents <- liftIO $ hGetContents handle
+          liftIO $ hClose handle
+--           contents <- loadBinary filename
           let romSize = length contents
 
           let addr = ord (contents!!16) + ord (contents!!17)*256
