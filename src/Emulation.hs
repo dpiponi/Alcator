@@ -1159,8 +1159,8 @@ renderDisplay = do
     attrib <- view glAttrib
     tex' <- view tex
     ptr <- view textureData
-    windowWidth' <- view windowWidth
-    windowHeight' <- view windowHeight
+--     windowWidth' <- view windowWidth
+--     windowHeight' <- view windowHeight
 --     liftIO $ print "renderDisplay"
     --
     -- Copy 6K of video RAM
@@ -1174,7 +1174,6 @@ renderDisplay = do
 --     (w, h) <- liftIO $ getWindowSize window
     (w', h') <- liftIO $ getFramebufferSize window
     mode <- load ppia0
-    let macRetinaKludge = 2 -- XXX figure this out
     liftIO $ draw (mode .&. 0xf0) w' h' prog attrib
 --     liftIO $ print "renderDisplay 3"
 

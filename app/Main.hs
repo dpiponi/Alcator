@@ -98,27 +98,25 @@ main = do
                            0x0000 window prog attrib tex' textureData'
                            controllerType
 
-        let keyCallback atomState window key someInt state mods = do
-                  let pressed = isPressed state
+        let keyCallback atomState _window key someInt action mods = do
+                  let pressed = isPressed action
                   flip runReaderT atomState $ unM $ 
                     case key of
                       Key'RightAlt -> updateRept pressed
                       _ -> do
                           done <- updatePPIA key pressed
-                          when (not done) $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt state mods), ()))
+                          when (not done) $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
         setKeyCallback window (Just (keyCallback state))
 
         --  Not at all clear this should work with GLFW
         --  though it appears to on OSX
-        let poller = liftIO pollEvents >> poller
-        forkIO poller
+        let poller = pollEvents >> poller
+        void $ forkIO poller
 
         let loop = do
---                 liftIO pollEvents
                 queue <- liftIO $ readIORef queueRef
                 when (not (null queue)) $ do
                     let Just (queuedKey, queue') = popFront queue
-    --                 liftIO $ print queue
                     liftIO $ writeIORef queueRef queue'
                     let UIKey {uiKey = key, uiState = motion} = queuedKey
                     handleKey motion key
