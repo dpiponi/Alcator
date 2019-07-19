@@ -89,11 +89,20 @@ main = do
 --     readBinary ramArray "acorn_roms/Atom_Demo.rom" (0x2900)
 
     withCurrentDirectory directory $ do
-        state <- initState screenScaleX' screenScaleY'
-                           (screenWidth*screenScaleX') (screenHeight*screenScaleY')
-                           ramArray
+        let graphicsState' = GraphicsState {
+            _sdlWindow = window,
+            _textureData = textureData',
+            _tex = tex',
+            _glProg = prog,
+            _glAttrib = attrib,
+            _xscale = screenScaleX',
+            _yscale = screenScaleY',
+            _windowWidth = screenWidth,
+            _windowHeight = screenHeight
+        }
+        state <- initState ramArray
                            romArray
-                           0x0000 window prog attrib tex' textureData'
+                           0x0000 graphicsState'
 
         let keyCallback atomState _window key someInt action mods = do
                   let pressed = isPressed action

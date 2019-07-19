@@ -2,7 +2,7 @@ module Events where
 
 -- import SDL.Event
 -- import SDL.Input.Keyboard
-import Keys hiding (debugMode)
+-- import Keys hiding (debugMode)
 import AcornAtom
 -- import SDL.Vect
 import Emulation
@@ -10,11 +10,10 @@ import Emulation
 import Control.Monad.Reader
 import Control.Lens hiding (op)
 import Asm
-import Data.Bits
+-- import Data.Bits
 import Data.Bits.Lens
 import System.Exit
-import Control.Concurrent
-import Metrics
+-- import Control.Concurrent
 -- import Data.Array.Storable
 import Debugger
 import Stella

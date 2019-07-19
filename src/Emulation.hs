@@ -98,7 +98,6 @@ readMemory :: Word16 -> MonadAcorn Word8
 writeMemory :: Word16 -> Word8 -> MonadAcorn ()
 illegal :: Word8 -> MonadAcorn ()
 
---
 -- {-# INLINE readMemory #-}
 readMemory addr' = do
     let addr = addr'
@@ -118,7 +117,6 @@ tick n = do
     c <- useClock id -- XXXXXXXXXXXXXXXXXXXXXX
     when (c `mod` 16667 == 0) $ do
         renderDisplay
---         liftIO $ print $ fromIntegral c/1000000
 
 -- {-# INLINE debugStr #-}
 debugStr _ _ = return ()
@@ -305,8 +303,6 @@ execStarCommand (LOAD filename loadAddress) = do
     bytes <- liftIO $ B.hGetContents h
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
---     let start = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
---     let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
     liftIO $ putStrLn $ "Loading at " ++ showHex addr ""
     forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
         writeMemory i (BS.c2w d)
@@ -350,32 +346,10 @@ execStarCommand (SAVE filename startAddress relative endAddress execAddress relo
     osfile
     p0 <- getPC
     putPC $ p0+2
--- execStarCommand (RUN filename) = do
---     putA 0xff
---     -- Control block at &02EE
---     putX 0xee
---     putY 0x02
---     let addrFilename = 0x200 :: Word16
---     forM_ (Prelude.zip [addrFilename..] filename) $ \(i, d) -> writeMemory (fromIntegral i) (BS.c2w d)
---     writeMemory (fromIntegral addrFilename+fromIntegral (Prelude.length filename)) 0
---     writeWord16 0x2ee addrFilename
---     -- Signal that we want to use load address alreday in file.
---     writeWord32 (0x2ee+6) 1
---     osfile
---     fileExec <- word32At (0x2ee+6)
---     liftIO $ putStrLn $ "Executing from 0x" ++ showHex fileExec ""
---     -- Fake JSR
---     p0 <- getPC
---     push $ hi (p0+1)
---     push $ lo (p0+1)
---     putPC (i16 fileExec)
 
 {-# INLINABLE oscli #-}
 oscli :: MonadAcorn ()
 oscli = do
---     lo <- getX
---     hi <- getY
---     let addr = make16 lo hi
     let addr = 0x100
     cmd <- stringAt addr
     liftIO $ putStrLn $ printf "OSCLI: %s" cmd
@@ -1016,18 +990,12 @@ rts = do
     discard $ readMemory p0
     putPC (p0+1)
 
-initState :: Int -> Int -> Int -> Int ->
-             IOUArray Int Word8 ->
+initState :: IOUArray Int Word8 ->
              IOUArray Int Word8 ->
              Word16 ->
-             Window -> 
-             GL.Program ->
-             GL.AttribLocation ->
-             GL.TextureObject ->
-             Ptr Word8 ->
+             GraphicsState ->
              IO AcornAtom
-initState xscale' yscale' width height ram'
-            rom' initialPC window prog attrib initTex initTextureData = do
+initState ram' rom' initialPC graphicsState' = do
           stellaDebug' <- newIORef DebugState.start
           t <- liftIO $ getTime Realtime
           let nt = addTime t (1000000000 `div` 60)
@@ -1039,17 +1007,6 @@ initState xscale' yscale' width height ram'
           word16Array' <- newArray (0, maxWord16) 0      -- Overkill
           word8Array' <- newArray (0, maxWord8) 0
           liftIO $ st word16Array' pc initialPC
-          let graphicsState' = GraphicsState {
-              _sdlWindow = window,
-              _textureData = initTextureData,
-              _tex = initTex,
-              _glProg = prog,
-              _glAttrib = attrib,
-              _xscale = xscale',
-              _yscale = yscale',
-              _windowWidth = width,
-              _windowHeight = height
-          }
           return $ AcornAtom {
               _nextFrameTime = nextFrameTime',
               _rom = rom',
