@@ -8,22 +8,18 @@ import AcornAtom
 import Emulation
 -- import qualified SDL
 import Control.Monad.Reader
-import Control.Lens
+import Control.Lens hiding (op)
 import Asm
 import Data.Bits
 import Data.Bits.Lens
 import System.Exit
 import Control.Concurrent
 import Metrics
-import Data.Array.Storable
+-- import Data.Array.Storable
 import Debugger
 import Stella
 import Graphics.UI.GLFW
-import qualified Data.Map.Strict as M
-#if TRACE
-import System.IO
-import Data.IORef
-#endif
+-- import qualified Data.Map.Strict as M
 
 {- INLINE isPressed -}
 isPressed :: KeyState -> Bool

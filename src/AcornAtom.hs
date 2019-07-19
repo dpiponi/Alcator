@@ -9,7 +9,8 @@
 module AcornAtom(
                  MonadAcorn(..),
                  AcornAtom(..),
-                 Controllers(..),
+                 GraphicsState(..),
+                 graphicsState,
                  getX,
                  putX,
                  getPC,
@@ -46,7 +47,6 @@ module AcornAtom(
                  modify,
                  useAtomDebug,
                  modifyClock,
-                 controllers,
                  ram,
                  rom,
                  nextFrameTime,
@@ -54,16 +54,13 @@ module AcornAtom(
                  putAtomDebug,
                  sdlWindow,
                  textureData,
---                  lastTextureData,
                  windowWidth,
                  windowHeight,
                  tex,
---                  lastTex,
                  glProg,
                  glAttrib,
                  stellaDebug,
                  clock,
-                 delays,
                  modifyAtomDebug
                  ) where
 
@@ -86,7 +83,19 @@ import Asm
 import Codec.Serialise
 
 -- Need to make left and right separately configurable
-data Controllers = Joysticks | Keypads deriving (Eq, Show, Read)
+data GraphicsState = GraphicsState {
+    _sdlWindow :: !GLFW.Window,
+    _textureData :: Ptr Word8,
+    _tex :: !GL.TextureObject,
+    _glProg :: !GL.Program,
+    _glAttrib :: !GL.AttribLocation,
+    _windowWidth :: !Int,
+    _windowHeight :: !Int,
+    _xscale :: !Int,
+    _yscale :: !Int
+}
+
+$(makeLenses ''GraphicsState)
 
 data AcornAtom = AcornAtom {
     _clock :: IORef Int64,
@@ -102,21 +111,7 @@ data AcornAtom = AcornAtom {
     _word16Array :: Segment Word16,
     _word64Array :: Segment Word64,
 
-    _controllers :: Controllers,
-
-    _sdlWindow :: !GLFW.Window,
-    _textureData :: Ptr Word8,
---     _lastTextureData :: Ptr Word8,
-    _tex :: !GL.TextureObject,
---     _lastTex :: !GL.TextureObject,
-    _glProg :: !GL.Program,
-    _glAttrib :: !GL.AttribLocation,
-    _windowWidth :: !Int,
-    _windowHeight :: !Int,
-    _xscale :: !Int,
-    _yscale :: !Int,
-
-    _delays :: IOUArray Word16 Int
+    _graphicsState :: GraphicsState
 }
 
 $(makeLenses ''AcornAtom)
@@ -164,40 +159,39 @@ frozen AcornAtom {
             _s_word16Array=Data.Array.elems word16Array1,
             _s_word64Array=Data.Array.elems word64Array1 }
 
-thawedLike :: AcornAtom -> SerialisableAcornAtom -> IO AcornAtom
-thawedLike atom SerialisableAcornAtom {
-            _s_clock=clock0,
-            _s_nextFrameTime=nextFrameTime0,
-            _s_ram=ram0,
-            _s_rom=rom0,
-            _s_boolArray=boolArray0,
-            _s_intArray=intArray0,
-            _s_word8Array=word8Array0,
-            _s_word16Array=word16Array0,
-            _s_word64Array=word64Array0 } = do
-                clock1 <- newIORef clock0
-                nextFrameTime1 <- newIORef nextFrameTime0
-                ram1 <- newListArray (0, 0x5fff) ram0
-                rom1 <- newListArray (0, 0x9fff) rom0
-                boolArray1 <- newListArray (0, maxBool) boolArray0
-                intArray1 <- newListArray (0, maxInt) intArray0
-                word8Array1 <- newListArray (0, maxWord8) word8Array0
-                word16Array1 <- newListArray (0, maxWord16) word16Array0
-                word64Array1 <- newListArray (0, maxWord64) word64Array0
-                return atom {
-                    _clock=clock1,
-                    _nextFrameTime=nextFrameTime1,
-                    _ram=ram1,
-                    _rom=rom1,
-                    _boolArray=boolArray1,
-                    _intArray=intArray1,
-                    _word8Array=word8Array1,
-                    _word16Array=word16Array1,
-                    _word64Array=word64Array1 }
+-- thawedLike :: AcornAtom -> SerialisableAcornAtom -> IO AcornAtom
+-- thawedLike atom SerialisableAcornAtom {
+--             _s_clock=clock0,
+--             _s_nextFrameTime=nextFrameTime0,
+--             _s_ram=ram0,
+--             _s_rom=rom0,
+--             _s_boolArray=boolArray0,
+--             _s_intArray=intArray0,
+--             _s_word8Array=word8Array0,
+--             _s_word16Array=word16Array0,
+--             _s_word64Array=word64Array0 } = do
+--                 clock1 <- newIORef clock0
+--                 nextFrameTime1 <- newIORef nextFrameTime0
+--                 ram1 <- newListArray (0, 0x5fff) ram0
+--                 rom1 <- newListArray (0, 0x9fff) rom0
+--                 boolArray1 <- newListArray (0, maxBool) boolArray0
+--                 intArray1 <- newListArray (0, maxInt) intArray0
+--                 word8Array1 <- newListArray (0, maxWord8) word8Array0
+--                 word16Array1 <- newListArray (0, maxWord16) word16Array0
+--                 word64Array1 <- newListArray (0, maxWord64) word64Array0
+--                 return atom {
+--                     _clock=clock1,
+--                     _nextFrameTime=nextFrameTime1,
+--                     _ram=ram1,
+--                     _rom=rom1,
+--                     _boolArray=boolArray1,
+--                     _intArray=intArray1,
+--                     _word8Array=word8Array1,
+--                     _word16Array=word16Array1,
+--                     _word64Array=word64Array1 }
 
--- zipWithM_ f (x:xs) (y:ys) = f x y >> zipWithM_ f xs ys
--- zipWithM_ f _ _ = return ()
-
+copyArray :: (MArray a e m, Ix i, Num i, Enum i) =>
+                   a i e -> [e] -> m ()
 copyArray mut imm = zipWithM_ (writeArray mut) [0..] imm
 
 thawInto :: AcornAtom -> SerialisableAcornAtom -> IO ()
@@ -356,53 +350,53 @@ putY :: Word8 -> MonadAcorn ()
 putPC :: Word16 -> MonadAcorn ()
 addPC :: Int -> MonadAcorn ()
 --
--- {-# INLINE getPC #-}
+{-# INLINE getPC #-}
 getPC = load pc
--- {-# INLINE putC #-}
+{-# INLINE putC #-}
 putC b = do { p' <- load p; p @= (p' & bitAt 0 .~ b) }
--- {-# INLINE getC #-}
+{-# INLINE getC #-}
 getC = do { p' <- load p; return (p' ^. bitAt 0) }
--- {-# INLINE putZ #-}
+{-# INLINE putZ #-}
 putZ b = do { p' <- load p; p @= (p' & bitAt 1 .~ b) }
--- {-# INLINE getZ #-}
+{-# INLINE getZ #-}
 getZ = do { p' <- load p; return (p' ^. bitAt 1) }
--- {-# INLINE putI #-}
+{-# INLINE putI #-}
 putI b = do { p' <- load p; p @= (p' & bitAt 2 .~ b) }
--- {-# INLINE getI #-}
+{-# INLINE getI #-}
 getI = do { p' <- load p; return (p' ^. bitAt 2) }
--- {-# INLINE putD #-}
+{-# INLINE putD #-}
 putD b = do { p' <- load p; p @= (p' & bitAt 3 .~ b) }
--- {-# INLINE getD #-}
+{-# INLINE getD #-}
 getD = do { p' <- load p; return (p' ^. bitAt 3) }
--- {-# INLINE putB #-}
+{-# INLINE putB #-}
 putB b = do { p' <- load p; p @= (p' & bitAt 4 .~ b) }
--- {-# INLINE getB #-}
+{-# INLINE getB #-}
 getB = do { p' <- load p; return (p' ^. bitAt 4) }
--- {-# INLINE putV #-}
+{-# INLINE putV #-}
 putV b = do { p' <- load p; p @= (p' & bitAt 6 .~ b) }
--- {-# INLINE getV #-}
+{-# INLINE getV #-}
 getV = do { p' <- load p; return (p' ^. bitAt 6) }
--- {-# INLINE putN #-}
+{-# INLINE putN #-}
 putN b = do { p' <- load p; p @= (p' & bitAt 7 .~ b) }
--- {-# INLINE getN #-}
+{-# INLINE getN #-}
 getN = do { p' <- load p; return (p' ^. bitAt 7) }
--- {-# INLINE getA #-}
+{-# INLINE getA #-}
 getA = load a
--- {-# INLINE putA #-}
+{-# INLINE putA #-}
 putA r = a @= r
--- {-# INLINE getS #-}
+{-# INLINE getS #-}
 getS = load s
--- {-# INLINE putS #-}
+{-# INLINE putS #-}
 putS r = s @= r
--- {-# INLINE getP #-}
+{-# INLINE getP #-}
 getP = load p
--- {-# INLINE putP #-}
+{-# INLINE putP #-}
 putP r = p @= r 
--- {-# INLINE getY #-}
+{-# INLINE getY #-}
 getY = load y
--- {-# INLINE putY #-}
+{-# INLINE putY #-}
 putY r = y @= r
--- {-# INLINE putPC #-}
+{-# INLINE putPC #-}
 putPC r = pc @= r
--- {-# INLINE addPC #-}
+{-# INLINE addPC #-}
 addPC n = modify pc (+ fromIntegral n)

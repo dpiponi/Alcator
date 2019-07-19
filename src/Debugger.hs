@@ -5,7 +5,7 @@ import Asm
 import AcornAtom
 import Step
 import Control.Monad
-import Control.Monad.State.Strict
+import Control.Monad.State.Strict hiding (state)
 import Data.Bits
 import Data.Char
 import DebugCmd

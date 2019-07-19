@@ -58,8 +58,6 @@ main = do
     print options'
     let screenScaleX' = screenScaleX options'
     let screenScaleY' = screenScaleY options'
-    let controllerTypeString = controllerTypes options'
-    let controllerType = read controllerTypeString
     let alpha = motionBlurAlpha options'
 
     rc <- init -- init video
@@ -96,7 +94,6 @@ main = do
                            ramArray
                            romArray
                            0x0000 window prog attrib tex' textureData'
-                           controllerType
 
         let keyCallback atomState _window key someInt action mods = do
                   let pressed = isPressed action

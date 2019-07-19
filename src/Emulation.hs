@@ -5,7 +5,57 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ApplicativeDo #-}
 
-module Emulation where
+module Emulation(
+                 brk,
+                 displayChars,
+                 dumpMemory,
+                 dumpState,
+                 illegal,
+                 incPC,
+                 jmp,
+                 jmp_indirect,
+                 jsr,
+                 nmi,
+                 nop,
+                 pha,
+                 php,
+                 pla,
+                 plp,
+                 pureWriteRom,
+                 readAbs,
+                 readAbsX,
+                 readAbsY,
+                 readImm,
+                 readIndX,
+                 readIndY,
+                 readMemory,
+                 readZeroPage,
+                 readZeroPage,
+                 readZeroPageX,
+                 readZeroPageY,
+                 rti,
+                 rts,
+                 tick,
+                 translateChar,
+                 writeAbs,
+                 writeAbsX,
+                 writeAbsY,
+                 writeIndX,
+                 writeIndY,
+                 bra,
+                 set,
+                 writeMemory,
+                 initHardware,
+                 initState,
+                 withAbs,
+                 withAbsX,
+                 withAcc,
+                 withZeroPage,
+                 withZeroPageX,
+                 writeZeroPage,
+                 writeZeroPageX,
+                 writeZeroPageY
+                ) where
 
 import Asm hiding (a, s, x)
 import AcornAtom
@@ -137,8 +187,8 @@ number base baseDigit
          ; seq n (return n)
          }
 
-filename :: ParsecT String u Identity String
-filename = (char '"' >> (many1 (noneOf "\"") <* char '"'))
+filename_literal :: ParsecT String u Identity String
+filename_literal = (char '"' >> (many1 (noneOf "\"") <* char '"'))
            <|> many1 (noneOf " ")
 
 ignoreCase :: Stream s m Char => [Char] -> ParsecT s u m [Char]
@@ -214,17 +264,17 @@ writeWord16 i w = do
 
 -- XXX Ignore case of commands
 parseCommand :: ParsecT String u Identity Command
-parseCommand = (LOAD <$> (ignoreCase "Load" >> spaces >> filename)
+parseCommand = (LOAD <$> (ignoreCase "Load" >> spaces >> filename_literal)
                      <*> option 0 (spaces >> number 16 hexDigit))
                <|>
-               (SAVE <$> (ignoreCase "Save" >> spaces >> (filename <* spaces))
+               (SAVE <$> (ignoreCase "Save" >> spaces >> (filename_literal <* spaces))
                      <*> (number 16 hexDigit <* spaces)
                      <*> option False (char '+' >> spaces >> return True)
                      <*> (number 16 hexDigit <* spaces)
                      <*> option 0 (number 16 hexDigit <* spaces)
                      <*> option 0 (number 16 hexDigit <* spaces))
                <|>
-               (RUN <$> (ignoreCase "Run" >> spaces >> (filename <* spaces)))
+               (RUN <$> (ignoreCase "Run" >> spaces >> (filename_literal <* spaces)))
 
 {-# INLINABLE osfile #-}
 osfile :: MonadAcorn ()
@@ -255,8 +305,8 @@ execStarCommand (LOAD filename loadAddress) = do
     bytes <- liftIO $ B.hGetContents h
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
-    let start = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
-    let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
+--     let start = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
+--     let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
     liftIO $ putStrLn $ "Loading at " ++ showHex addr ""
     forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
         writeMemory i (BS.c2w d)
@@ -270,19 +320,17 @@ execStarCommand (RUN filename) = do
     bytes <- liftIO $ B.hGetContents h
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
-    let start = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
+    let exec_addr = i16 (bytes'!!18) + 256*i16 (bytes'!!19)
     let len = i16 (bytes'!!20) + 256*i16 (bytes'!!21)
     liftIO $ putStrLn $ "Loading at " ++ showHex addr ""
-    liftIO $ putStrLn $ "Running from " ++ showHex start ""
+    liftIO $ putStrLn $ "Running from " ++ showHex exec_addr ""
     forM_ (Prelude.zip [addr..] (Prelude.drop 22 $ Prelude.map BS.w2c $ B.unpack bytes)) $ \(i, d) -> do
         writeMemory i (BS.c2w d)
     liftIO $ print "Done"
     liftIO $ hClose h
---     p0 <- getPC
-    putPC start
+    putPC exec_addr
 
 execStarCommand (SAVE filename startAddress relative endAddress execAddress reloadAddress) = do
-    --liftIO $ printf "*SAVE %s %08x %d %08x %08x" filename startAddress (if relative then 1 else 0::Int) endAddress execAddress
     putA 0
     -- Control block at &02EE
     putX 0xee
@@ -977,28 +1025,33 @@ initState :: Int -> Int -> Int -> Int ->
              GL.AttribLocation ->
              GL.TextureObject ->
              Ptr Word8 ->
-             Controllers ->
              IO AcornAtom
 initState xscale' yscale' width height ram'
-            rom' initialPC window prog attrib initTex initTextureData controllerType = do
+            rom' initialPC window prog attrib initTex initTextureData = do
           stellaDebug' <- newIORef DebugState.start
           t <- liftIO $ getTime Realtime
           let nt = addTime t (1000000000 `div` 60)
           nextFrameTime' <- newIORef nt
           clock' <- newIORef 0
-          -- debug' <- newIORef 8
           boolArray' <- newArray (0, maxBool) False
           intArray' <- newArray (0, maxInt) 0      -- Overkill
           word64Array' <- newArray (0, maxWord64) 0
           word16Array' <- newArray (0, maxWord16) 0      -- Overkill
           word8Array' <- newArray (0, maxWord8) 0
           liftIO $ st word16Array' pc initialPC
-          return $ AcornAtom {
-              _nextFrameTime = nextFrameTime',
+          let graphicsState' = GraphicsState {
+              _sdlWindow = window,
+              _textureData = initTextureData,
+              _tex = initTex,
+              _glProg = prog,
+              _glAttrib = attrib,
               _xscale = xscale',
               _yscale = yscale',
               _windowWidth = width,
-              _windowHeight = height,
+              _windowHeight = height
+          }
+          return $ AcornAtom {
+              _nextFrameTime = nextFrameTime',
               _rom = rom',
               _ram = ram',
               _stellaDebug = stellaDebug',
@@ -1008,12 +1061,7 @@ initState xscale' yscale' width height ram'
               _word64Array = word64Array',
               _word16Array = word16Array',
               _word8Array = word8Array',
-              _controllers = controllerType,
-              _sdlWindow = window,
-              _textureData = initTextureData,
-              _tex = initTex,
-              _glProg = prog,
-              _glAttrib = attrib
+              _graphicsState = graphicsState'
           }
 
 -- {-# INLINE pureReadRom #-}
@@ -1154,11 +1202,16 @@ dumpState = do
 
 renderDisplay :: MonadAcorn ()
 renderDisplay = do
-    window <- view sdlWindow
-    prog <- view glProg
-    attrib <- view glAttrib
-    tex' <- view tex
-    ptr <- view textureData
+    GraphicsState { _sdlWindow=window,
+                    _glProg=prog,
+                    _glAttrib=attrib,
+                    _tex=tex',
+                    _textureData=ptr } <- view graphicsState
+--     let window = graphicsState' ^. sdlWindow
+--     let prog = graphicsState' ^. view glProg
+--     let attrib = view glAttrib
+--     let tex' = view tex
+--     let ptr = view textureData
 --     windowWidth' <- view windowWidth
 --     windowHeight' <- view windowHeight
 --     liftIO $ print "renderDisplay"
