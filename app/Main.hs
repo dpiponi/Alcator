@@ -26,15 +26,16 @@ import Events
 import Keys
 import Metrics
 import Stella
--- import SDL.Event
 import Step
 import System.Console.CmdArgs hiding ((+=))
--- import qualified SDL
 import Graphics.UI.GLFW
 import Data.IORef
 import Data.Dequeue
 
-data Args = Args { file :: String, options :: String, command :: Maybe String, debugStart :: Bool,  workingDirectory :: String } deriving (Show, Data, Typeable)
+data Args = Args { file :: String, options :: String,
+                   command :: Maybe String,
+                   debugStart :: Bool,
+                   workingDirectory :: String } deriving (Show, Data, Typeable)
 
 clargs :: Args
 clargs = Args { file = "adventure.bin",
@@ -115,7 +116,7 @@ main = do
         setKeyCallback window (Just (keyCallback state))
 
         --  Not at all clear this should work with GLFW
-        --  though it appears to on OSX
+        --  though it appears to on OSX and Linux
         let poller = pollEvents >> poller
         void $ forkIO poller
 

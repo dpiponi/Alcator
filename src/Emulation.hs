@@ -232,19 +232,15 @@ stringAt addr = do
 
 {-# INLINE word16At #-}
 word16At :: Word16 -> MonadAcorn Word16
-word16At addr = do
-    lo <- readMemory addr
-    hi <- readMemory (addr+1)
-    return $ make16 lo hi
+word16At addr = make16 <$> readMemory addr <*> readMemory (addr+1)
 
 {-# INLINE word32At #-}
 word32At :: Word16 -> MonadAcorn Word32
-word32At addr = do
-    b0 <- readMemory addr
-    b1 <- readMemory (addr+1)
-    b2 <- readMemory (addr+2)
-    b3 <- readMemory (addr+3)
-    return $ make32 b0 b1 b2 b3
+word32At addr = make32 <$>
+      readMemory addr     <*>
+      readMemory (addr+1) <*>
+      readMemory (addr+2) <*>
+      readMemory (addr+3)
 
 {-# INLINE putWord32 #-}
 putWord32 :: Word16 -> Word32 -> MonadAcorn ()
@@ -1026,7 +1022,6 @@ pureReadRom :: Word16 -> MonadAcorn Word8
 pureReadRom addr = do
     atom <- ask
     let m = atom ^. rom
---     liftIO $ putStrLn $ "rom read addr =" ++ showHex (iz addr) ""
     liftIO $ readArray m (iz addr - 0xa000) -- Rom starts ac 0xc000
 
 -- {-# INLINE pureWriteRom #-}
@@ -1164,33 +1159,19 @@ renderDisplay = do
                     _glAttrib=attrib,
                     _tex=tex',
                     _textureData=ptr } <- view graphicsState
---     let window = graphicsState' ^. sdlWindow
---     let prog = graphicsState' ^. view glProg
---     let attrib = view glAttrib
---     let tex' = view tex
---     let ptr = view textureData
---     windowWidth' <- view windowWidth
---     windowHeight' <- view windowHeight
---     liftIO $ print "renderDisplay"
     --
     -- Copy 6K of video RAM
     forM_ [0..6143::Int] $ \i -> do
         byte <- readMemory (0x8000 + i16 i)
         liftIO $ pokeElemOff ptr (fromIntegral $ i) byte
 
---     liftIO $ print "renderDisplay 1"
     liftIO $ updateTexture tex' ptr
---     (w, h) <- getFramebufferSize window
---     (w, h) <- liftIO $ getWindowSize window
     (w', h') <- liftIO $ getFramebufferSize window
     mode <- load ppia0
     liftIO $ draw (mode .&. 0xf0) w' h' prog attrib
---     liftIO $ print "renderDisplay 3"
 
     waitUntilNextFrameDue
---     liftIO $ swapInterval 0
     liftIO $ swapBuffers window
---     liftIO $ print "renderDisplay done"
     return ()
 
 -- Note this fixes the *frame* rate.

@@ -358,7 +358,7 @@ makeMainWindow screenScaleX' screenScaleY' queue = do
 
     mWindow <- createWindow (fromIntegral $ screenScaleX'*screenWidth)
                             (fromIntegral $ screenScaleY'*screenHeight)
-                            "Stellarator"
+                            "Alcator"
                             Nothing
                             Nothing
     case mWindow of
