@@ -30,7 +30,7 @@ updateTexture texName textureData = do
         GL.Texture2D
         0
         (GL.TexturePosition2D 0 0)
-        (GL.TextureSize2D 64 96)
+        (GL.TextureSize2D 128 128)
         (GL.PixelData GL.Red GL.UnsignedByte textureData)
     return ()
 
@@ -39,11 +39,11 @@ createImageTexture :: GL.TextureObject -> IO (Ptr Word8)
 createImageTexture texName = do
     GL.textureBinding GL.Texture2D $= Just texName
 
-    textureData <- mallocBytes 6144 :: IO (Ptr Word8)
+    textureData <- mallocBytes 16384 :: IO (Ptr Word8)
 
-    -- Allocate 6K of video RAM
-    -- as width 64, height 96
-    forM_ [0..6143::Int] $ \i ->
+    -- Allocate 16K of video RAM
+    -- as width 128, height 128
+    forM_ [0..16383::Int] $ \i ->
         pokeElemOff textureData (fromIntegral $ i) 0
 
     GL.textureBinding GL.Texture2D $= Just texName
@@ -52,7 +52,7 @@ createImageTexture texName = do
         GL.NoProxy
         0
         GL.R8
-        (GL.TextureSize2D 64 96)
+        (GL.TextureSize2D 128 128)
         0
         (GL.PixelData GL.Red GL.UnsignedByte textureData)
 
@@ -71,6 +71,7 @@ createFontTexture texName font_data = do
         GL.NoProxy
         0
         GL.R8
+        -- Non-square, probably needs fixing XXX
         (GL.TextureSize2D 256 96)
         0
         (GL.PixelData GL.Red GL.UnsignedByte font_data)
@@ -223,8 +224,10 @@ fsSource = BS.intercalate "\n"
            [
                 "#version 110",
                 "",
-                "int f(int x) { return x+1; }",
-                "",
+                "float testbit(int byte, int bit) {",
+                "  int px = int(pow(2., float(bit)));",
+                "  return mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
+                "}",
                 "uniform sampler2D current_frame;",
                 "uniform sampler2D table;",
                 "uniform sampler2D last_frame;",
@@ -242,15 +245,15 @@ fsSource = BS.intercalate "\n"
                 "        int fx = x-8*ix;",
                 "        int fy = y-12*iy;",
                 "        int addr = 32*iy+ix;",
-                "        int ty = addr/64;",
-                "        int tx = addr-64*ty;",
-                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/64., float(ty)/96.));",
-                "        int character = int(255.0*last_index.x);",
+                "        int ty = addr/128;",
+                "        int tx = addr-128*ty;",
+                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
+                "        int character = int(256.0*last_index.x);",
                 "        int cy = character/32;",
                 "        int cx = character-32*cy;",
                 "        int px = 8*cx+fx;",
                 "        int py = 12*cy+fy;",
-                "        float z = texture2D(table, vec2(float(px)/256.0, float(py)/96.0)).x;",
+                "        float z = texture2D(table, vec2(float(px)/255.0, float(py)/95.0)).x;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
                 "    } else if (mode == 48.0) {",
                 "        int x = int(128.*texcoord.x);",
@@ -258,10 +261,10 @@ fsSource = BS.intercalate "\n"
                 "        int ix = x/8;",
                 "        int fx = 7-(x-8*ix);",
                 "        int addr = 16*y+ix;",
-                "        int ty = addr/64;",
-                "        int tx = addr-64*ty;",
-                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/64., float(ty)/96.));",
-                "        int byte = int(255.0*last_index.x);",
+                "        int ty = addr/128;",
+                "        int tx = addr-128*ty;",
+                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
+                "        int byte = int(256.0*last_index.x);",
                 "        int px = int(pow(2., float(fx)));",
                 "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
@@ -271,10 +274,10 @@ fsSource = BS.intercalate "\n"
                 "        int ix = x/8;",
                 "        int fx = 7-(x-8*ix);",
                 "        int addr = 16*y+ix;",
-                "        int ty = addr/64;",
-                "        int tx = addr-64*ty;",
-                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/64., float(ty)/96.));",
-                "        int byte = int(255.0*last_index.x);",
+                "        int ty = addr/128;",
+                "        int tx = addr-128*ty;",
+                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
+                "        int byte = int(256.0*last_index.x);",
                 "        int px = int(pow(2., float(fx)));",
                 "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
@@ -284,10 +287,10 @@ fsSource = BS.intercalate "\n"
                 "        int ix = x/8;",
                 "        int fx = 7-(x-8*ix);",
                 "        int addr = 16*y+ix;",
-                "        int ty = addr/64;",
-                "        int tx = addr-64*ty;",
-                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/64., float(ty)/96.));",
-                "        int byte = int(255.0*last_index.x);",
+                "        int ty = addr/128;",
+                "        int tx = addr-128*ty;",
+                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
+                "        int byte = int(256.0*last_index.x);",
                 "        int px = int(pow(2., float(fx)));",
                 "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
@@ -297,10 +300,10 @@ fsSource = BS.intercalate "\n"
                 "        int ix = x/8;",
                 "        int fx = 7-(x-8*ix);",
                 "        int addr = 32*y+ix;",
-                "        int ty = addr/64;",
-                "        int tx = addr-64*ty;",
-                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/64., float(ty)/96.));",
-                "        int byte = int(255.0*last_index.x);",
+                "        int ty = addr/128;",
+                "        int tx = addr-128*ty;",
+                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
+                "        int byte = int(256.0*last_index.x);",
                 "        int px = int(pow(2., float(fx)));",
                 "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
@@ -310,10 +313,10 @@ fsSource = BS.intercalate "\n"
                 "        int ix = x/4;",
                 "        int fx = 3-(x-4*ix);",
                 "        int addr = 32*y+ix;",
-                "        int ty = addr/64;",
-                "        int tx = addr-64*ty;",
-                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/64., float(ty)/96.));",
-                "        int byte = int(255.0*last_index.x);",
+                "        int ty = addr/128;",
+                "        int tx = addr-128*ty;",
+                "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
+                "        int byte = int(256.0*last_index.x);",
                 "        int px = int(pow(2., float(2*fx)));",
                 "        int bits = mod(float(byte), float(2*px)) >= float(px) ? 1 : 0;",
                 "        bits += mod(float(byte), float(4*px)) >= float(2*px) ? 2 : 0;",

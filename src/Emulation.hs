@@ -987,9 +987,6 @@ initState xscale' yscale' width height ram'
           nextFrameTime' <- newIORef nt
           clock' <- newIORef 0
           -- debug' <- newIORef 8
-#if TRACE
-          recordPtr' <- newIORef 0
-#endif
           boolArray' <- newArray (0, maxBool) False
           intArray' <- newArray (0, maxInt) 0      -- Overkill
           word64Array' <- newArray (0, maxWord64) 0
@@ -1003,10 +1000,6 @@ initState xscale' yscale' width height ram'
               _windowWidth = width,
               _windowHeight = height,
               _rom = rom',
-#if TRACE
-              _record = record',
-              _recordPtr = recordPtr',
-#endif
               _ram = ram',
               _stellaDebug = stellaDebug',
               _clock = clock',
@@ -1018,9 +1011,7 @@ initState xscale' yscale' width height ram'
               _controllers = controllerType,
               _sdlWindow = window,
               _textureData = initTextureData,
---               _lastTextureData = initLastTextureData,
               _tex = initTex,
---               _lastTex = initLastTex,
               _glProg = prog,
               _glAttrib = attrib
           }
@@ -1028,8 +1019,8 @@ initState xscale' yscale' width height ram'
 -- {-# INLINE pureReadRom #-}
 pureReadRom :: Word16 -> MonadAcorn Word8
 pureReadRom addr = do
-    atari <- ask
-    let m = atari ^. rom
+    atom <- ask
+    let m = atom ^. rom
 --     liftIO $ putStrLn $ "rom read addr =" ++ showHex (iz addr) ""
     liftIO $ readArray m (iz addr - 0xa000) -- Rom starts ac 0xc000
 
@@ -1038,8 +1029,8 @@ pureReadRom addr = do
 -- You can write to Super Chip "ROM"
 pureWriteRom :: Word16 -> Word8 -> MonadAcorn ()
 pureWriteRom addr v = do
-    atari <- ask
-    let m = atari ^. rom
+    atom <- ask
+    let m = atom ^. rom
     liftIO $ writeArray m (iz addr - 0xa000) v
 
 -- {-# INLINE pureReadMemory #-}
@@ -1050,7 +1041,6 @@ pureReadMemory PPIA addr = do
         0xb001 -> do
             row <- load keyboard_row
             bits <- load (keyboard_matrix + fromIntegral row)
---             liftIO $ putStrLn $ "Reading 0x" ++ showHex bits "" ++ " from PPIA: 0x" ++ showHex addr ""
             return bits
 
 --        Port C - #B002
@@ -1076,16 +1066,18 @@ pureReadMemory PPIA addr = do
 --          -- PAL vertical blanking 1600 us
 --          -- NTSC vertical blanking 1333us
             ppia2' <- load ppia2
-            let bits = if s < 1333 then (ppia2' `xor` 0x40) else (ppia2' `xor` 0x40) .|. 0x80
+            let someBits = ppia2' `xor` 0x40
+            let bits = if s < 1333
+                        then someBits
+                        else someBits .|. 0x80
             return bits
         _ -> return 0
     return bits
 pureReadMemory VIA _ = return 0
 pureReadMemory ROM  addr = pureReadRom addr
 pureReadMemory RAM  addr = do
-    atari <- ask
-    let m = atari ^. ram
---     liftIO $ putStrLn $ "ram read addr =" ++ showHex (iz addr) ""
+    atom <- ask
+    let m = atom ^. ram
     liftIO $ readArray m (iz addr)
 
 displayChars :: String
@@ -1109,8 +1101,8 @@ pureWriteMemory PPIA addr v = do
 pureWriteMemory VIA _ _ = return ()
 pureWriteMemory ROM  addr v = pureWriteRom addr v
 pureWriteMemory RAM  addr v = do
-    atari <- ask
-    let m = atari ^. ram
+    atom <- ask
+    let m = atom ^. ram
     let realAddress = iz addr
     liftIO $ writeArray m realAddress v
 
@@ -1166,9 +1158,7 @@ renderDisplay = do
     prog <- view glProg
     attrib <- view glAttrib
     tex' <- view tex
---     lastTex' <- view lastTex
     ptr <- view textureData
---     lastPtr <- view lastTextureData
     windowWidth' <- view windowWidth
     windowHeight' <- view windowHeight
 --     liftIO $ print "renderDisplay"
@@ -1179,14 +1169,13 @@ renderDisplay = do
         liftIO $ pokeElemOff ptr (fromIntegral $ i) byte
 
 --     liftIO $ print "renderDisplay 1"
-    -- Remove lastTex' ?
     liftIO $ updateTexture tex' ptr
---     liftIO $ updateTexture lastTex' ptr
 --     (w, h) <- getFramebufferSize window
-    (w, h) <- liftIO $ getWindowSize window
+--     (w, h) <- liftIO $ getWindowSize window
+    (w', h') <- liftIO $ getFramebufferSize window
     mode <- load ppia0
     let macRetinaKludge = 2 -- XXX figure this out
-    liftIO $ draw (mode .&. 0xf0) (macRetinaKludge*w) (macRetinaKludge*h) prog attrib
+    liftIO $ draw (mode .&. 0xf0) w' h' prog attrib
 --     liftIO $ print "renderDisplay 3"
 
     waitUntilNextFrameDue

@@ -44,14 +44,14 @@ module AcornAtom(
                  load,
                  store,
                  modify,
-                 useStellaDebug,
+                 useAtomDebug,
                  modifyClock,
                  controllers,
                  ram,
                  rom,
                  nextFrameTime,
                  useClock,
-                 putStellaDebug,
+                 putAtomDebug,
                  sdlWindow,
                  textureData,
 --                  lastTextureData,
@@ -64,7 +64,7 @@ module AcornAtom(
                  stellaDebug,
                  clock,
                  delays,
-                 modifyStellaDebug
+                 modifyAtomDebug
                  ) where
 
 import Control.Lens
@@ -288,22 +288,22 @@ instance Reg Bool MonadAcorn where
         value <- view boolArray
         liftIO $ unsafeWrite value (unTyped r) v
 
-{-# INLINE useStellaDebug #-}
-useStellaDebug :: Getting b DebugState b -> MonadAcorn b
-useStellaDebug lens' = do
+{-# INLINE useAtomDebug #-}
+useAtomDebug :: Getting b DebugState b -> MonadAcorn b
+useAtomDebug lens' = do
     atari <- ask
     stellaDebug' <- liftIO $ readIORef (atari ^. stellaDebug)
     return $! stellaDebug' ^. lens'
 
-{-# INLINE putStellaDebug #-}
-putStellaDebug :: ASetter DebugState DebugState a a -> a -> MonadAcorn ()
-putStellaDebug lens' value = do
+{-# INLINE putAtomDebug #-}
+putAtomDebug :: ASetter DebugState DebugState a a -> a -> MonadAcorn ()
+putAtomDebug lens' value = do
     atari <- ask
     liftIO $ modifyIORef' (atari ^. stellaDebug) (set lens' value)
 
-{-# INLINE modifyStellaDebug #-}
-modifyStellaDebug :: ASetter DebugState DebugState a b -> (a -> b) -> MonadAcorn ()
-modifyStellaDebug lens' modifier = do
+{-# INLINE modifyAtomDebug #-}
+modifyAtomDebug :: ASetter DebugState DebugState a b -> (a -> b) -> MonadAcorn ()
+modifyAtomDebug lens' modifier = do
     atari <- ask
     liftIO $ modifyIORef' (atari ^. stellaDebug) (over lens' modifier)
 

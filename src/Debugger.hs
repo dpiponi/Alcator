@@ -53,7 +53,7 @@ eval PL = EBool <$> not <$> getN
 eval DebugCmd.Clock = EInt <$> fromIntegral <$> useClock id
 
 eval (Var name) = do
-    v <- useStellaDebug variables
+    v <- useAtomDebug variables
     case Map.lookup name v of
         Nothing -> return EFail
         Just value -> return value
@@ -143,8 +143,8 @@ execCommand cmd =
     case cmd of
         Let var e -> do
             e' <- eval e
-            modifyStellaDebug variables $ Map.insert var e'
-            _ <- useStellaDebug variables -- Uh? XXX
+            modifyAtomDebug variables $ Map.insert var e'
+            _ <- useAtomDebug variables
             return KeepDebugging
         Block cmds -> do
             loop KeepDebugging cmds where
