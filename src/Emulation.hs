@@ -135,9 +135,6 @@ writeWord32 i w = do
 
 hostFileName :: String -> MonadAcorn String
 hostFileName name = return name
--- hostFileName name@(_ : '.' : _) = return name
---     dir <- use currentDirectory
---     return $ dir : '.' : name
 
 saveBlock :: Word16 -> String -> MonadAcorn ()
 saveBlock blockAddr hostName = do
@@ -896,6 +893,12 @@ php = do
     tick 1
     getP >>= push . (.|. 0x30)
 
+spinS :: MonadAcorn ()
+spinS = do
+    tick 1
+    s <- getS
+    discard $ readMemory (0x100+i16 s)
+
 -- 4 clock cycles
 -- {-# INLINABLE plp #-}
 plp :: MonadAcorn ()
@@ -904,9 +907,10 @@ plp = do
     p0 <- getPC
     discard $ readMemory p0
 
-    tick 1
-    s <- getS
-    discard $ readMemory (0x100+i16 s)
+    spinS
+--     tick 1
+--     s <- getS
+--     discard $ readMemory (0x100+i16 s)
 
     tick 1
     pull >>= putP
@@ -919,9 +923,10 @@ pla = do
     p0 <- getPC
     discard $ readMemory p0
 
-    tick 1
-    s <- getS
-    discard $ readMemory (0x100+i16 s)
+--     tick 1
+--     s <- getS
+--     discard $ readMemory (0x100+i16 s)
+    spinS
 
     tick 1
     pull >>= setNZ >>= putA
@@ -946,9 +951,10 @@ rti = do
     p0 <- getPC
     void $ readMemory p0
 
-    tick 1
-    s <- getS
-    discard $ readMemory (0x100 + fromIntegral s)
+--     tick 1
+--     s <- getS
+--     discard $ readMemory (0x100 + i16 s)
+    spinS
 
     tick 1
     pull >>= putP
@@ -964,9 +970,10 @@ jsr = do
     pcl <- readMemory p0
     incPC
 
-    tick 1
-    s <- getS
-    discard $ readMemory (0x100 + fromIntegral s)
+--     tick 1
+--     s <- getS
+--     discard $ readMemory (0x100 + fromIntegral s)
+    spinS
 
     p2 <- getPC
 
@@ -988,9 +995,10 @@ rts = do
     tick 1
     discard $ getPC >>= readMemory
 
-    tick 1
-    s <- getS
-    discard $ readMemory (0x100+i16 s)
+--     tick 1
+--     s <- getS
+--     discard $ readMemory (0x100+i16 s)
+    spinS
 
     p0 <- make16 <$> (tick 1 >> pull) <*> (tick 1 >> pull)
     
@@ -1047,42 +1055,40 @@ pureWriteRom addr v = do
 
 -- {-# INLINE pureReadMemory #-}
 pureReadMemory :: MemoryType -> Word16 -> MonadAcorn Word8
-pureReadMemory PPIA addr = do
-    bits <- case addr of
+pureReadMemory PPIA addr =
+    case addr of
         0xb000 -> load ppia0
         0xb001 -> do
             row <- load keyboard_row
             load (keyboard_matrix + fromIntegral row)
 
---        Port C - #B002
---        Output bits:      Function:
---             0          Tape output
---             1          Enable 2.4 kHz to cassette output
---             2          Loudspeaker
---             3          Not used
--- 
---        Input bits:       Function:
---             4          2.4 kHz input
---             5          Cassette input
---             6          REPT key (low when pressed)
---             7          60 Hz sync signal (low during flyback)
+            -- Port C - #B002
+            -- Output bits:      Function:
+            --      0          Tape output
+            --      1          Enable 2.4 kHz to cassette output
+            --      2          Loudspeaker
+            --      3          Not used
+            --
+            -- Input bits:       Function:
+            --      4          2.4 kHz input
+            --      5          Cassette input
+            --      6          REPT key (low when pressed)
+            --      7          60 Hz sync signal (low during flyback)
 
         0xb002 -> do
             c <- useClock id
             -- flyback
             -- 20000/frame PAL   16667/US
             let s = c `mod` 16667 -- clock cycles per 60 Hz
---             liftIO $ putStrLn $ "c = " ++ show s ++ ", s = " ++ show s
---          -- The 0x40 is the REPT key
---          -- PAL vertical blanking 1600 us
---          -- NTSC vertical blanking 1333us
+            -- The 0x40 is the REPT key
+            -- PAL vertical blanking 1600 us
+            -- NTSC vertical blanking 1333us
             ppia2' <- load ppia2
             let someBits = ppia2' `xor` 0x40
-            return if s < 1333
+            return $ if s < 1333
               then someBits
               else someBits .|. 0x80
         _ -> return 0
-    return bits
 pureReadMemory VIA _ = return 0
 pureReadMemory ROM  addr = pureReadRom addr
 pureReadMemory RAM  addr = do
