@@ -18,7 +18,7 @@ step = do
     case i of
         0x00 -> brk
         0x01 -> ora readIndX
-        0x04 -> void $ readZeroPage -- XXX undocumented "DOP" nop
+        0x04 -> void readZeroPage -- XXX undocumented "DOP" nop
         0x05 -> ora readZeroPage
         0x06 -> asl withZeroPage
         0x08 -> php

@@ -83,8 +83,7 @@ branch pc mne (b : bs) =
 branch _  _   _        = error "Not handled"
 
 withData01 :: Word8 -> String -> [Word8] -> (Int, String, [Word8])
-withData01 bbb = do
-    case bbb of
+withData01 bbb = case bbb of
         0b000 -> indirectX
         0b001 -> zeroPage
         0b010 -> immediate
