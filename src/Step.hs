@@ -78,7 +78,7 @@ step = do
         0x68 -> pla
         0x69 -> adc readImm
         0x6a -> ror withAcc
-        0x6c -> jmp_indirect
+        0x6c -> jmpIndirect
         0x6d -> adc readAbs
         0x6e -> ror withAbs
         0x70 -> bra getV True

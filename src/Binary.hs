@@ -1,10 +1,12 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Binary where
 
+import Prelude hiding (words)
 import System.IO
-import Control.Monad
+-- import Control.Monad
 import Data.Array.IO
 import Data.Char
 import Foreign.Marshal.Alloc
@@ -38,7 +40,7 @@ readFont :: FilePath -> IO (Ptr Word8)
 readFont filename = 
     withFile filename ReadMode $ \handle -> do
       contents <- hGetContents handle
-      let tex_data = V.map (\x -> if x == 88 then 0xff else 0x00) $
+      let tex_data = V.map @Int (\x -> if x == 88 then 0xff else 0x00) $
                      V.filter (\x -> x == 88 || x == 32) $
                      V.map (fromIntegral . ord) $
                      V.fromList contents

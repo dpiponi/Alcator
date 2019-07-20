@@ -13,9 +13,9 @@ import Codec.Serialise
 import qualified Data.ByteString.Lazy as BSL
 import DebugState
 import Disasm
-import Emulation hiding (Command)
+import Emulation
 import Numeric
-import System.Console.Haskeline
+import System.Console.Haskeline hiding (handle)
 import Text.Parsec
 import qualified Data.Map.Strict as Map
 import Control.Monad.Reader

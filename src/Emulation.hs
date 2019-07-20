@@ -12,7 +12,7 @@ module Emulation(
                  illegal,
                  incPC,
                  jmp,
-                 jmp_indirect,
+                 jmpIndirect,
                  jsr,
                  nmi,
                  nop,
@@ -20,6 +20,7 @@ module Emulation(
                  php,
                  pla,
                  plp,
+                 irq,
                  pureWriteRom,
                  readAbs,
                  readAbsX,
@@ -29,7 +30,6 @@ module Emulation(
                  readIndY,
                  readMemory,
                  readMemoryTick,
-                 readZeroPage,
                  readZeroPage,
                  readZeroPageX,
                  readZeroPageY,
@@ -65,16 +65,16 @@ import Control.Lens hiding (set, op, index, noneOf)
 import Control.Monad.Reader
 import Data.Array.IO hiding (index)
 import Data.Bits hiding (bit)
-import Data.ByteString hiding (putStrLn, putStr, index)
+-- import Data.ByteString hiding (putStrLn, putStr, index)
 import Data.Char
 import Data.IORef
 import Data.Int
-import Data.Maybe
+-- import Data.Maybe
 import Data.Word
 import DebugState
 import Disasm hiding (make16)
 import Display
-import Foreign.Ptr
+-- import Foreign.Ptr
 import Foreign.Storable
 import Graphics.UI.GLFW hiding (getTime)
 import Memory
@@ -88,7 +88,7 @@ import Text.Parsec
 import Text.Printf
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BS (c2w, w2c)
-import qualified Graphics.Rendering.OpenGL as GL
+-- import qualified Graphics.Rendering.OpenGL as GL
 
 readMemory :: Word16 -> MonadAcorn Word8
 illegal :: Word8 -> MonadAcorn ()
@@ -116,9 +116,9 @@ tick n = do
     when (c `mod` 16667 == 0) renderDisplay
 
 -- {-# INLINE debugStr #-}
-debugStr _ _ = return ()
+-- debugStr _ _ = return ()
 -- {-# INLINE debugStrLn #-}
-debugStrLn _ _ = return ()
+-- debugStrLn _ _ = return ()
 
 -- Host instruction stuff..
 writeWord32 :: Word16 -> Word32 -> MonadAcorn ()
@@ -135,11 +135,11 @@ saveBlock :: Word16 -> String -> MonadAcorn ()
 saveBlock blockAddr hostName = do
     startData32 <- word32At (blockAddr+0xa)
     endData32 <- word32At (blockAddr+0xe)
-    let start = i16 startData32
-    let end = i16 endData32
-    liftIO $ putStr $ printf " Save %04x:%04x to '%s'" start end hostName
+    let start_addr = i16 startData32
+    let end_addr = i16 endData32
+    liftIO $ putStr $ printf " Save %04x:%04x to '%s'" start_addr end_addr hostName
     h <- liftIO $ openBinaryFile hostName WriteMode
-    forM_ [start..end-1] $ \i -> do
+    forM_ [start_addr..end_addr-1] $ \i -> do
         x <- readMemory i
         liftIO $ hPutChar h (BS.w2c x)
     liftIO $ hClose h
@@ -147,9 +147,9 @@ saveBlock blockAddr hostName = do
 loadFile :: Word16 -> String -> MonadAcorn ()
 loadFile blockAddr hostName = do
     loadAddr32 <- word32At (blockAddr+0x2)
-    execAddr32 <- word32At (blockAddr+0x6)
-    startData32 <- word32At (blockAddr+0xa)
-    addressType <- readMemory (blockAddr+0x6)
+--     execAddr32 <- word32At (blockAddr+0x6)
+--     startData32 <- word32At (blockAddr+0xa)
+--     addressType <- readMemory (blockAddr+0x6)
 
     -- If caller-specified execution address ends in zero
     -- use user-specified load address
@@ -230,13 +230,13 @@ word32At addr = make32 <$>
       readMemory (addr+2) <*>
       readMemory (addr+3)
 
-{-# INLINE putWord32 #-}
-putWord32 :: Word16 -> Word32 -> MonadAcorn ()
-putWord32 addr w = do
-    writeMemory addr (i8 w)
-    writeMemory (addr+1) (i8 (w `shift` (-8)))
-    writeMemory (addr+2) (i8 (w `shift` (-16)))
-    writeMemory (addr+3) (i8 (w `shift` (-24)))
+-- {-# INLINE putWord32 #-}
+-- putWord32 :: Word16 -> Word32 -> MonadAcorn ()
+-- putWord32 addr w = do
+--     writeMemory addr (i8 w)
+--     writeMemory (addr+1) (i8 (w `shift` (-8)))
+--     writeMemory (addr+2) (i8 (w `shift` (-16)))
+--     writeMemory (addr+3) (i8 (w `shift` (-24)))
 
 {-# INLINE writeWord16 #-}
 writeWord16 :: Word16 -> Word16 -> MonadAcorn ()
@@ -261,24 +261,24 @@ parseCommand = (LOAD <$> (ignoreCase "Load" >> spaces >> filename_literal)
 {-# INLINABLE osfile #-}
 osfile :: MonadAcorn ()
 osfile = do
-    a <- getA
-    x <- getX
-    y <- getY
+    arg_a <- getA
+    arg_x <- getX
+    arg_y <- getY
 
-    liftIO $ putStrLn $ printf "OSFILE A=%02x X=%02x Y=%02x" a x y
+    liftIO $ putStrLn $ printf "OSFILE A=%02x X=%02x Y=%02x" arg_a arg_x arg_y
 
-    let blockAddr = make16 x y
+    let blockAddr = make16 arg_x arg_y
     stringAddr <- word16At blockAddr
     rawFilename <- stringAt stringAddr
     hostName <- hostFileName rawFilename
     
     -- Note that the 'end' field points to the last byte,
     -- not the first byte after the end.
-    case a of
+    case arg_a of
         0x00 -> saveBlock blockAddr hostName
         0xff -> loadFile blockAddr hostName
 
-        _ -> error $ "Unknown OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y
+        _ -> error $ "Unknown OSFILE call " ++ show arg_a ++ "," ++ show arg_x ++ "," ++ show arg_y
 
 loadBinary :: String -> MonadAcorn B.ByteString
 loadBinary filename = liftIO $ do
@@ -286,7 +286,7 @@ loadBinary filename = liftIO $ do
     B.hGetContents h <* hClose h
 
 execStarCommand :: Command -> MonadAcorn ()
-execStarCommand (LOAD filename loadAddress) = do
+execStarCommand (LOAD filename _loadAddress) = do
 
     bytes <- loadBinary filename
     let bytes' = B.unpack $ B.take 22 bytes
@@ -370,8 +370,8 @@ illegal i =
         dumpState
         error $ "Illegal opcode 0x" ++ showHex i ""
 
-debugStr :: Int -> String -> MonadAcorn ()
-debugStrLn :: Int -> String -> MonadAcorn ()
+-- debugStr :: Int -> String -> MonadAcorn ()
+-- debugStrLn :: Int -> String -> MonadAcorn ()
 
 -- {-# INLINE incPC #-}
 incPC :: MonadAcorn ()
@@ -467,7 +467,7 @@ writeZeroPageX src = do
 
     discard $ readZpTick addr
 
-    writeMemoryTick (i16 $ addr+index) src
+    writeMemoryTick (i16 $ addr+index) src -- writezp
     incPC
 
 -- 4 clock cycles
@@ -655,8 +655,8 @@ jmp = getPC >>= read16tick >>= putPC
 -- Looks like the torture test might not catch this.
 -- Aha! That's why ALIGN is used before addresses!
 -- {-# INLINABLE jmp_indirect #-}
-jmp_indirect :: MonadAcorn ()
-jmp_indirect = getPC >>= read16tick >>= read16tick >>= putPC
+jmpIndirect :: MonadAcorn ()
+jmpIndirect = getPC >>= read16tick >>= read16tick >>= putPC
 
 -- {-# INLINABLE uselessly #-}
 uselessly :: m () -> m ()
@@ -1042,21 +1042,25 @@ renderDisplay = do
 -- It has nothing to do with the simulated clock
 waitUntilNextFrameDue :: MonadAcorn ()
 waitUntilNextFrameDue = do
-    nextFrameTimeRef <- view nextFrameTime
-    nextFrameTime' <- liftIO $ readIORef nextFrameTimeRef
-    t <- liftIO $ getTime Realtime
+  nextFrameTimeRef <- view nextFrameTime
+
+  liftIO $ do
+    nextFrameTime' <- readIORef nextFrameTimeRef
+    t <- getTime Realtime
     let frameTimeAfter = addTime nextFrameTime' (1000000000 `div` fps)
-    liftIO $ writeIORef nextFrameTimeRef frameTimeAfter
-    let TimeSpec {sec=secondsToGo, nsec=nanosecondsToGo} = diffTimeSpec nextFrameTime' t
-    let timeToGo = fromIntegral secondsToGo+fromIntegral nanosecondsToGo/1e9 :: Double
-    when (nextFrameTime' `gtTime` t) $ do
-        let microSecondsToGo = 1000000.0 * timeToGo
-        liftIO $ threadDelay $ floor microSecondsToGo
+    writeIORef nextFrameTimeRef frameTimeAfter
+
+    let TimeSpec {sec=secondsToGo,
+                  nsec=nanosecondsToGo} = diffTimeSpec nextFrameTime' t
+    let timeToGo = fromIntegral secondsToGo +
+                   fromIntegral nanosecondsToGo / 1e9 :: Double
+    when (nextFrameTime' `gtTime` t) $
+      threadDelay $ floor (1000000.0 * timeToGo)
 
 initHardware :: MonadAcorn ()
 initHardware = do
     -- Clear keyboard
-    forM_ [0..9::Int] $ \i ->
+    forM_ [0..9 :: Int] $ \i ->
         store (keyboard_matrix + fromIntegral i) 0xff
     pclo <- readMemory 0xfffc
     pchi <- readMemory 0xfffd

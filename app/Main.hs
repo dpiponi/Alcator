@@ -3,6 +3,7 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GADTs #-}
 
 module Main where
@@ -42,6 +43,18 @@ clargs = Args { file = "adventure.bin",
                 debugStart = False,
                 workingDirectory = "." }
 
+loopEmulation :: IORef (BankersDequeue UIKey) -> MonadAcorn ()
+loopEmulation queueRef = do
+        queue <- liftIO $ readIORef queueRef
+        unless (null queue) $ do
+            let Just (queuedKey, queue') = popFront queue
+            liftIO $ writeIORef queueRef queue'
+            let UIKey {uiKey = key, uiState = motion} = queuedKey
+            handleKey motion key
+        loopUntil 1000
+
+        loopEmulation queueRef
+
 main :: IO ()
 main = do
     fontData <- readFont "font.txt"
@@ -61,8 +74,7 @@ main = do
 
     rc <- init -- init video
     unless rc $ die "Couldn't init graphics"
-    queueRef <- newIORef empty
-    window <- makeMainWindow screenScaleX' screenScaleY' queueRef
+    window <- makeMainWindow screenScaleX' screenScaleY'
 
     (prog, attrib, tex', textureData') <- initResources alpha fontData
 
@@ -103,6 +115,8 @@ main = do
                            romArray
                            0x0000 graphicsState'
 
+        queueRef <- newIORef @(BankersDequeue UIKey) empty
+
         let keyCallback atomState _window key someInt action mods = do
                   let pressed = isPressed action
                   flip runReaderT atomState $ unM $ 
@@ -115,19 +129,7 @@ main = do
 
         --  Not at all clear this should work with GLFW
         --  though it appears to on OSX and Linux
-        let poller = pollEvents >> poller
-        void $ forkIO poller
-
-        let loop = do
-                queue <- liftIO $ readIORef queueRef
-                unless (null queue) $ do
-                    let Just (queuedKey, queue') = popFront queue
-                    liftIO $ writeIORef queueRef queue'
-                    let UIKey {uiKey = key, uiState = motion} = queuedKey
-                    handleKey motion key
-                loopUntil 1000
-
-                loop
+        void $ forkIO $ forever pollEvents
 
         _ <- flip runReaderT state $ unM $ do
                 initHardware
@@ -136,7 +138,7 @@ main = do
                     Just c -> void $ execLine c
                 when (debugStart args') runDebugger
                 resetNextFrame
-                loop
+                loopEmulation queueRef
 
         destroyWindow window
         -- XXX Free malloced data?

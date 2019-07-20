@@ -305,8 +305,6 @@ fsSource = BS.intercalate "\n"
                 "        vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));",
                 "        int byte = int(255.0*last_index.x);",
                 "        float z = testbit(byte, fx);",
---                 "        int px = int(pow(2., float(fx)));",
---                 "        float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;",
                 "        gl_FragColor = vec4(z, z, z, 1.0);",
                 "    } else if (mode == 208.0 || true) { // 4a",
                 "        int x = int(128.*texcoord.x);",
@@ -349,8 +347,8 @@ vertices = V.fromList [ -1.0, -1.0
                       , -1.0,  1.0
                       ]
 
-makeMainWindow :: Int -> Int -> IORef (BankersDequeue UIKey) -> IO Window
-makeMainWindow screenScaleX' screenScaleY' queue = do
+makeMainWindow :: Int -> Int -> IO Window
+makeMainWindow screenScaleX' screenScaleY' = do
     
     windowHint (WindowHint'OpenGLProfile OpenGLProfile'Any)
     windowHint (WindowHint'DoubleBuffer True)
