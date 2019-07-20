@@ -1,31 +1,13 @@
 module Stella where
 
 import AcornAtom
-import Asm hiding (a)
 import Control.Lens
-import Control.Monad
 import Control.Monad.IO.Class
-import Data.Bits hiding (bit)
-import Data.Bits.Lens
 import Data.IORef
 import Data.Int
-import Data.Word
 import Metrics
 import Prelude hiding (last, and)
 import System.Clock
-
--- stellaTickFor :: Int -> MonadAcorn ()
--- stellaTickFor d = do
---     n <- load ahead
---     if d > n
---         then do
---             stellaTickFor' (d-n)
---         else return ()
--- 
--- stellaTickFor' :: Int -> MonadAcorn ()
--- stellaTickFor' diff = do
---     when (diff >= 0) $ do
---         modifyStellaClock id (+ fromIntegral diff)
 
 -- add nanoseconds
 addTime :: TimeSpec -> Int64 -> TimeSpec

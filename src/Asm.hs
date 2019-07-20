@@ -29,57 +29,24 @@ ppia2 = 27
 maxWord8 :: TypedIndex Word8
 maxWord8 = 0x124 -- for backwards compatibility
 
-trigger1, trigger2, delayP0, delayP1, delayBall, oldBall, newBall, pendingHmove, debugColours :: TypedIndex Bool
-trigger1 = 0
-trigger2 = 1
-delayP0 = 2
-delayP1 = 3
-delayBall = 4
-oldBall = 5
-newBall = 6
-pendingHmove = 7
-debugColours = 8
-
 kbd :: Int -> Int -> TypedIndex Bool
 kbd i j = fromIntegral $ 8+i*6+j
 
 maxBool :: TypedIndex Bool
 maxBool = kbd 3 5
 
-pf :: TypedIndex Word64
-pf = 0
-
 maxWord64 :: TypedIndex Word64
-maxWord64 = pf
-
-subtimer, interval :: TypedIndex Int
-debug :: TypedIndex Int
-subtimer = 2
-interval = 3
-debug = 9
+maxWord64 = 0
 
 maxInt :: TypedIndex Int
-maxInt = debug
+maxInt = 9
 
-pc, bankOffset, pcStep, pcResp0, pcResp1, pcResm0, pcResm1, pcResbl, pcColup0, pcColup1, pcColupf, pcColubk, pcPf0, pcPf1, pcPf2 :: TypedIndex Word16
+pc, pcStep :: TypedIndex Word16
 pc = 0
-bankOffset = 1
-pcStep = 2
-pcResp0 = 3
-pcResp1 = 4
-pcResm0 = 5
-pcResm1 = 6
-pcResbl = 7
-pcColup0 = 8
-pcColup1 = 9
-pcColupf = 10
-pcColubk = 11
-pcPf0 = 12
-pcPf1 = 13
-pcPf2 = 14
+pcStep = 2 -- Do I need this? XXX
 
 maxWord16 :: TypedIndex Word16
-maxWord16 = pcPf2
+maxWord16 = 14
 
 {-# INLINE ld #-}
 ld :: MArray IOUArray a IO => IOUArray (TypedIndex a) a -> TypedIndex a -> IO a
