@@ -14,46 +14,20 @@ import GHC.Generics
 newtype TypedIndex t = TO { unTyped :: Int } deriving (Ord, Ix, Eq, Num, Generic, Enum)
 instance Serialise (TypedIndex a)
 
-intim, p, a, x, y, s, timint, ppia0, keyboard_matrix, keyboard_row, keyboard_matrix_end, ppia2 :: TypedIndex Word8
-intim = 0
+p, a, x, y, s, ppia0, keyboard_matrix, keyboard_row, keyboard_matrix_end, ppia2 :: TypedIndex Word8
 p = 1
 a = 2
 x = 3
 y = 4
 s = 5
-timint = 10
 ppia0 = 14
 keyboard_row = 15
 keyboard_matrix = 16
 keyboard_matrix_end = 26
 ppia2 = 27
 
-nusiz0, nusiz1, colup0, colup1, pf0, pf1, pf2, enam0, enam1, hmp0, hmp1, hmm0, hmm1, hmbl :: TypedIndex Word8
-vblank, vsync, refp0, refp1, colupf, colubk, ctrlpf :: TypedIndex Word8
-vsync = 0x100+0x00
-vblank = 0x100+0x01
-nusiz0 = 0x100+0x04
-nusiz1 = 0x100+0x05
-colup0 = 0x100+0x06
-colup1 = 0x100+0x07
-colupf = 0x100+0x08
-colubk = 0x100+0x09
-ctrlpf = 0x100+0x0a
-refp0 = 0x100+0x0b
-refp1 = 0x100+0x0c
-pf0 = 0x100+0x0d
-pf1 = 0x100+0x0e
-pf2 = 0x100+0x0f
-enam0 = 0x100+0x1d
-enam1 = 0x100+0x1e
-hmp0 = 0x100+0x20
-hmp1 = 0x100+0x21
-hmm0 = 0x100+0x22
-hmm1 = 0x100+0x23
-hmbl = 0x100+0x24
-
 maxWord8 :: TypedIndex Word8
-maxWord8 = hmbl
+maxWord8 = 0x124 -- for backwards compatibility
 
 trigger1, trigger2, delayP0, delayP1, delayBall, oldBall, newBall, pendingHmove, debugColours :: TypedIndex Bool
 trigger1 = 0
