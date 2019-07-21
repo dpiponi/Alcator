@@ -36,6 +36,7 @@ data Args = Args { file :: String, options :: String,
                    debugStart :: Bool,
                    workingDirectory :: String } deriving (Show, Data, Typeable)
 
+
 clargs :: Args
 clargs = Args { file = "adventure.bin",
                 options = ".alcator-options",
@@ -55,31 +56,14 @@ loopEmulation queueRef = do
 
         loopEmulation queueRef
 
-main :: IO ()
-main = do
-    fontData <- readFont "font.txt"
-    args' <- cmdArgs clargs
+createMemory :: IO (IOUArray Int Word8, IOUArray Int Word8)
+createMemory = do
+    rom <- newArray (0, 0x5fff) 0 :: IO (IOUArray Int Word8)
+    ram <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
+    return (rom, ram)
 
-    let optionsFile = options args'
-    let startCommand = command args'
-    let directory = workingDirectory args'
-    putStrLn $ "Reading options from '" ++ optionsFile ++ "'"
-    putStrLn $ "Debug = " ++ show (debugStart args')
-    optionsString <- readFile optionsFile
-    let options' = read optionsString :: Options
-    print options'
-    let screenScaleX' = screenScaleX options'
-    let screenScaleY' = screenScaleY options'
-    let alpha = motionBlurAlpha options'
-
-    rc <- init -- init video
-    unless rc $ die "Couldn't init graphics"
-    window <- makeMainWindow screenScaleX' screenScaleY'
-
-    (prog, attrib, tex', textureData') <- initResources alpha fontData
-
-    romArray <- newArray (0, 0x5fff) 0 :: IO (IOUArray Int Word8)
-    ramArray <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
+loadROMS :: IOUArray Int Word8 -> IO ()
+loadROMS romArray = do
     readBinary romArray "acorn_roms/Atom_Kernel.rom" (0xf000 - 0xa000)
     readBinary romArray "acorn_roms/Atom_Basic.rom" (0xc000 - 0xa000)
     readBinary romArray "acorn_roms/Atom_FloatingPoint.rom" (0xd000 - 0xa000)
@@ -99,6 +83,43 @@ main = do
 --     readBinary ramArray "software/BB/INVADBB" (0x2900-22)
 --     readBinary ramArray "acorn_roms/Atom_Demo.rom" (0x2900)
 
+keyCallback :: AcornAtom -> IORef (BankersDequeue UIKey)
+             -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
+keyCallback atomState queueRef _window key someInt action mods = do
+  let pressed = isPressed action
+  flip runReaderT atomState $ unM $ 
+    case key of
+      Key'RightAlt -> updateRept pressed
+      _ -> do
+          done <- updatePPIA key pressed
+          unless done $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
+
+main :: IO ()
+main = do
+    fontData <- readFont "font.txt"
+    args' <- cmdArgs clargs
+
+    let optionsFile = options args'
+    let startCommand = command args'
+    let directory = workingDirectory args'
+    putStrLn $ "Reading options from '" ++ optionsFile ++ "'"
+    putStrLn $ "Debug = " ++ show (debugStart args')
+    optionsString <- readFile optionsFile
+    let options' = read optionsString :: Options
+    print options'
+    let screenScaleX' = screenScaleX options'
+    let screenScaleY' = screenScaleY options'
+    let mode = 0
+
+    rc <- init -- init video
+    unless rc $ die "Couldn't init graphics"
+    window <- makeMainWindow screenScaleX' screenScaleY'
+
+    (prog, attrib, tex', textureData') <- initResources mode fontData
+
+    (rom, ram) <- createMemory
+    loadROMS rom
+
     withCurrentDirectory directory $ do
         let graphicsState' = GraphicsState {
             _sdlWindow = window,
@@ -111,21 +132,11 @@ main = do
             _windowWidth = screenWidth,
             _windowHeight = screenHeight
         }
-        state <- initState ramArray
-                           romArray
-                           0x0000 graphicsState'
+        state <- initState ram rom 0x0000 graphicsState'
 
         queueRef <- newIORef @(BankersDequeue UIKey) empty
 
-        let keyCallback atomState _window key someInt action mods = do
-                  let pressed = isPressed action
-                  flip runReaderT atomState $ unM $ 
-                    case key of
-                      Key'RightAlt -> updateRept pressed
-                      _ -> do
-                          done <- updatePPIA key pressed
-                          unless done $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
-        setKeyCallback window (Just (keyCallback state))
+        setKeyCallback window (Just (keyCallback state queueRef))
 
         --  Not at all clear this should work with GLFW
         --  though it appears to on OSX and Linux

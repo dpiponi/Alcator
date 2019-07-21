@@ -1,5 +1,23 @@
 #version 110
 
+// Acorn atom graphics modes
+// Mode:       Resolution:          Memory:   #B000
+//             X:       Y:
+//  0          64       48           0.5 K    #00
+//  1a         64       64             1 K    #10
+//  1         128       64             1 K    #30
+//  2a        128       64             2 K    #50
+//  2         128       96           1.5 K    #70
+//  3a        128       96             3 K    #90
+//  3         128      192             3 K    #B0
+//  4a        128      192             6 K    #D0
+//  4         256      192             6 K    #F0
+
+// 0 green
+// 1 yellow
+// 2 blue
+// 3 red
+
 float testbit(int byte, int bit) {
   int px = int(pow(2., float(bit)));
   return mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;
