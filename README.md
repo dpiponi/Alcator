@@ -56,6 +56,13 @@ Key mappings:
 I'll try to improve the key mapping but that does mean some faking of the state of
 the shift key and that could have weird side-effects.
 
+On startup a utility is loaded to #9800, just above screen memory. Use `LINK #9800` to install it. This will now give access to `*LOAD "file"` and `*RUN "file"` that will read (and/or execute) files in `.atm` format.
+For example, if Snowball is stored in `software/L9/SNOWBALL/SNOWBALL` you can start it with
+```
+    LINK #9800
+    *RUN "s/L9/SNOWBALL/SNOWBALL"
+```
+
 Screenshots
 -----------
 ![Centipede screenshot](docs/centipede.gif?raw=true "Centipede screenshot")
