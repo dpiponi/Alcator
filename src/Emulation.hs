@@ -528,10 +528,7 @@ readImm = fetchByteTick <* incPC
 -- 4 clock cycles
 -- {-# INLINABLE readAbs #-}
 readAbs :: MonadAcorn Word8
-readAbs = do
-    p0 <- getPC
-    addPC 2
-    read16tick p0 >>= readMemoryTick
+readAbs = getPC <* addPC 2 >>= read16tick >>= readMemoryTick
 
 -- 5-6 clock cycles
 -- {-# INLINABLE readIndY #-}

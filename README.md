@@ -5,6 +5,7 @@
 An Acorn Atom emulator.
 
 (This is actually forked from my Atari 2600 emulator.)
+This is work in progress. You can play pretty much any Acorn Atom game that doesn't use a 6522 VIA chip but it's not all documented yet.
 
 You'll need some ROMs.
 You can get them from [here](http://www.acornatom.nl/atom_handleidingen/aw123/acorn_roms.htm).
