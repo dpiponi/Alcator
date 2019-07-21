@@ -104,13 +104,12 @@ startingState args' = do
     putStrLn $ "Reading options from '" ++ optionsFile ++ "'"
     optionsString <- readFile optionsFile
     let options' = read optionsString :: Options
-    let screenScaleX' = screenScaleX options'
-    let screenScaleY' = screenScaleY options'
+    let screenScale' = screenScale options'
     let mode = 0
 
     rc <- init -- init video
     unless rc $ die "Couldn't init graphics"
-    window <- makeMainWindow screenScaleX' screenScaleY'
+    window <- makeMainWindow screenScale'
 
     (prog, attrib, tex', textureData') <- initResources mode fontData
 
@@ -123,8 +122,8 @@ startingState args' = do
         _tex = tex',
         _glProg = prog,
         _glAttrib = attrib,
-        _xscale = screenScaleX',
-        _yscale = screenScaleY',
+        _xscale = fst screenScale',
+        _yscale = snd screenScale',
         _windowWidth = screenWidth,
         _windowHeight = screenHeight
     }

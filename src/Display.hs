@@ -206,8 +206,8 @@ vertices = V.fromList [ -1.0, -1.0
                       , -1.0,  1.0
                       ]
 
-makeMainWindow :: Int -> Int -> IO Window
-makeMainWindow screenScaleX' screenScaleY' = do
+makeMainWindow :: (Int, Int) -> IO Window
+makeMainWindow (screenScaleX', screenScaleY') = do
     
     windowHint (WindowHint'OpenGLProfile OpenGLProfile'Any)
     windowHint (WindowHint'DoubleBuffer True)
