@@ -94,7 +94,6 @@ readMemory :: Word16 -> MonadAcorn Word8
 illegal :: Word8 -> MonadAcorn ()
 
 -- {-# INLINE readMemory #-}
--- readMemory addr = pureReadMemory (memoryType addr) addr
 readMemory addr = pureReadMemory (memoryType addr) addr
 
 -- {-# INLINE writeMemory #-}
@@ -112,13 +111,9 @@ writeMemoryTick addr v = do
 tick :: Int -> MonadAcorn ()
 tick n = do
     modifyClock id (+ fromIntegral n)
-    c <- useClock id -- XXXXXXXXXXXXXXXXXXXXXX
+    c <- useClock id
+    -- Misses if tick 2 used.
     when (c `mod` 16667 == 0) renderDisplay
-
--- {-# INLINE debugStr #-}
--- debugStr _ _ = return ()
--- {-# INLINE debugStrLn #-}
--- debugStrLn _ _ = return ()
 
 -- Host instruction stuff..
 writeWord32 :: Word16 -> Word32 -> MonadAcorn ()
@@ -299,10 +294,6 @@ execStarCommand (LOAD filename _loadAddress) = do
     putPC $ p0+2
 
 execStarCommand (RUN filename) = do
---     h <- liftIO $ openBinaryFile filename ReadMode
---     bytes <- liftIO $ B.hGetContents h
---     liftIO $ hClose h
-
     bytes <- loadBinary filename
     let bytes' = B.unpack $ B.take 22 bytes
     let addr = i16 (bytes'!!16) + 256*i16 (bytes'!!17)
@@ -531,10 +522,7 @@ readZeroPage = do
 -- 2 clock cycles
 -- {-# INLINABLE readImm #-}
 readImm :: MonadAcorn Word8
-readImm = do
-    src <- fetchByteTick
-    incPC
-    return src
+readImm = fetchByteTick <* incPC
 
 -- XXX consider applicable ops like *>
 -- 4 clock cycles
@@ -654,7 +642,7 @@ jmp = getPC >>= read16tick >>= putPC
 -- Not correct here.
 -- Looks like the torture test might not catch this.
 -- Aha! That's why ALIGN is used before addresses!
--- {-# INLINABLE jmp_indirect #-}
+-- {-# INLINABLE jmpIndirect #-}
 jmpIndirect :: MonadAcorn ()
 jmpIndirect = getPC >>= read16tick >>= read16tick >>= putPC
 
@@ -734,13 +722,14 @@ withAbsX op = do
 -- {-# INLINABLE brk #-}
 brk :: MonadAcorn ()
 brk = do
-    p0 <- getPC
+--     p0 <- getPC
+--     discard $ readMemoryTick p0
+    discard $ fetchByteTick
     incPC
-    discard $ readMemoryTick p0
 
     p1 <- getPC
-    incPC
     pushTick $ hi p1
+    incPC
 
     incPC
     pushTick $ lo p1

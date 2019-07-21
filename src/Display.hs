@@ -128,7 +128,6 @@ connectProgramToTextures program mode
                          current_frame_tex font_tex = do
     GL.currentProgram $= Just program
     current_screen_tex_loc <- GL.uniformLocation program "current_frame"
---     last_screen_tex_loc <- GL.uniformLocation program "last_frame"
     font_tex_loc <- GL.uniformLocation program "table"
     mode_loc <- GL.uniformLocation program "mode"
 
@@ -173,15 +172,11 @@ initResources mode font_data = do
 
     return (program, GL.AttribLocation 0, current_frame_tex, textureData)
 
--- | Render VCS screen as pair of triangles.
 draw :: Word8 -> Int -> Int -> GL.Program -> GL.AttribLocation -> IO ()
 draw mode windowWidth windowHeight program attrib = do
---     print "Draw 1"
     GL.clearColor $= GL.Color4 0 0 0 0
     GL.clear [GL.ColorBuffer]
     GL.viewport $= (GL.Position 0 0, GL.Size (fromIntegral windowWidth) (fromIntegral windowHeight))
---     (w, h) <- getFramebufferSize window
---     GL.viewport $= (GL.Position 0 0, GL.Size (fromIntegral w) (fromIntegral h))
 
     GL.currentProgram $= Just program
 

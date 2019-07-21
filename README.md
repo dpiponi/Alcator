@@ -22,7 +22,7 @@ The code uses `glfw`. You may need to install `homebrew` and then run
     brew install glfw3
 
 This Acorn Atom is configured with 40K RAM and 24K of ROM.
-It doesn'have a 6522 VIA.
+It doesn't have a 6522 VIA.
 
 Screenshots
 -----------
@@ -107,6 +107,3 @@ Complex examples
     u(?pc==0x20){s;l}  - keep executing until first JSR
     p(!(0x101+s)+1)    - print return address on top of stack
 ```
-
-UI events to the main window are ignored while single stepping though
-I'll probably fix that eventually.
