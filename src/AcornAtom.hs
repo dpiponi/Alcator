@@ -11,6 +11,7 @@ module AcornAtom(
                  AcornAtom(..),
                  GraphicsState(..),
                  graphicsState,
+                 withAtom,
                  getX,
                  putX,
                  getPC,
@@ -115,6 +116,9 @@ data AcornAtom = AcornAtom {
 }
 
 $(makeLenses ''AcornAtom)
+
+withAtom :: AcornAtom -> MonadAcorn a -> IO a
+withAtom state = flip runReaderT state . unM
 
 data SerialisableAcornAtom = SerialisableAcornAtom {
     _s_clock :: Int64,

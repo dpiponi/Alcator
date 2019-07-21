@@ -9,12 +9,13 @@
 module Main where
 
 import Prelude hiding (last, init, null)
-import AcornAtom
+import AcornAtom hiding (ram, rom)
 import Binary
 import Control.Monad
 import Control.Monad.Reader
 import Data.Array.IO
 import System.Directory
+import Control.Lens
 import Data.Binary hiding (get)
 import Debugger
 import System.Exit
@@ -94,19 +95,15 @@ keyCallback atomState queueRef _window key someInt action mods = do
           done <- updatePPIA key pressed
           unless done $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
 
-main :: IO ()
-main = do
+startingState :: Args -> IO AcornAtom
+startingState args' = do
     fontData <- readFont "font.txt"
-    args' <- cmdArgs clargs
 
     let optionsFile = options args'
-    let startCommand = command args'
-    let directory = workingDirectory args'
+
     putStrLn $ "Reading options from '" ++ optionsFile ++ "'"
-    putStrLn $ "Debug = " ++ show (debugStart args')
     optionsString <- readFile optionsFile
     let options' = read optionsString :: Options
-    print options'
     let screenScaleX' = screenScaleX options'
     let screenScaleY' = screenScaleY options'
     let mode = 0
@@ -120,37 +117,45 @@ main = do
     (rom, ram) <- createMemory
     loadROMS rom
 
-    withCurrentDirectory directory $ do
-        let graphicsState' = GraphicsState {
-            _sdlWindow = window,
-            _textureData = textureData',
-            _tex = tex',
-            _glProg = prog,
-            _glAttrib = attrib,
-            _xscale = screenScaleX',
-            _yscale = screenScaleY',
-            _windowWidth = screenWidth,
-            _windowHeight = screenHeight
-        }
-        state <- initState ram rom 0x0000 graphicsState'
+    let graphicsState' =  GraphicsState {
+        _sdlWindow = window,
+        _textureData = textureData',
+        _tex = tex',
+        _glProg = prog,
+        _glAttrib = attrib,
+        _xscale = screenScaleX',
+        _yscale = screenScaleY',
+        _windowWidth = screenWidth,
+        _windowHeight = screenHeight
+    }
 
-        queueRef <- newIORef @(BankersDequeue UIKey) empty
+    initState ram rom 0x0000 graphicsState'
 
-        setKeyCallback window (Just (keyCallback state queueRef))
+main :: IO ()
+main = do
+    args' <- cmdArgs clargs
+    state <- startingState args'
+    let window = state ^. graphicsState . sdlWindow
 
-        --  Not at all clear this should work with GLFW
-        --  though it appears to on OSX and Linux
-        void $ forkIO $ forever pollEvents
+    let directory = workingDirectory args'
+    let startCommand = command args'
 
-        _ <- flip runReaderT state $ unM $ do
-                initHardware
-                case startCommand of
-                    Nothing -> return()
-                    Just c -> void $ execLine c
-                when (debugStart args') runDebugger
-                resetNextFrame
-                loopEmulation queueRef
+    --  Not at all clear this should work with GLFW
+    --  though it appears to on OSX and Linux
+    queueRef <- newIORef @(BankersDequeue UIKey) empty
+    setKeyCallback window (Just (keyCallback state queueRef))
+    void $ forkIO $ forever pollEvents
 
-        destroyWindow window
-        -- XXX Free malloced data?
-        terminate
+    withCurrentDirectory directory $
+        void $ withAtom state $ do
+            initHardware
+            case startCommand of
+                Nothing -> return()
+                Just c -> void $ execLine c
+            when (debugStart args') runDebugger
+            resetNextFrame
+            loopEmulation queueRef
+
+    destroyWindow window
+    -- XXX Free malloced data?
+    terminate
