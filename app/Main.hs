@@ -62,6 +62,7 @@ createMemory :: IO (IOUArray Int Word8, IOUArray Int Word8)
 createMemory = do
     ram <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
     rom <- newArray (0, 0x5fff) 0 :: IO (IOUArray Int Word8)
+    readBinary ram "utility.bin" (0x9800 - 0x0000)
     return (rom, ram)
 
 loadROMS :: IOUArray Int Word8 -> IO ()
@@ -71,7 +72,7 @@ loadROMS romArray = do
     readBinary romArray "acorn_roms/Atom_FloatingPoint.rom" (0xd000 - 0xa000)
 --     readBinary romArray "acorn_roms/Atom_pcharme.rom" (0xa000 - 0xa000)
 --     readBinary romArray "acorn_roms/Atom_Toolkit.rom" (0xa000 - 0xa000)
-    readBinary romArray "utility.bin" (0xa000 - 0xa000)
+--     readBinary romArray "utility.bin" (0xa000 - 0xa000)
 
 keyCallback :: AcornAtom -> IORef (BankersDequeue UIKey)
              -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
