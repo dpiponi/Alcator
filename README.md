@@ -2,6 +2,8 @@
 
 ![Acorn Atom](docs/acorn_atom.png?raw=true "Acorn Atom")
 
+![Frogger screenshot](docs/frogger.gif?raw=true "Frogger screenshot")
+
 An Acorn Atom emulator.
 
 (This is actually forked from my Atari 2600 emulator.)
@@ -88,7 +90,6 @@ A good trick is to use `LINK #9800` and `*LOAD` to load a game and then use `lef
 Screenshots
 -----------
 ![Centipede screenshot](docs/centipede.gif?raw=true "Centipede screenshot")
-![Frogger screenshot](docs/frogger.gif?raw=true "Frogger screenshot")
 ![Atomcalc screenshot](docs/atomcalc.gif?raw=true "Atomcalc screenshot")
 
 Debugger
