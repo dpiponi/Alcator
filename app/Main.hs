@@ -61,6 +61,13 @@ createMemory = do
     ram <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
     rom <- newArray (0, 0x5fff) 0 :: IO (IOUArray Int Word8)
     readBinary ram "utility.bin" (0x9800 - 0x0000)
+    -- Randomise BASIC random seed area.
+    -- Real hardware relies on SRAM being initialised randomly.
+    writeArray ram 0x08 12
+    writeArray ram 0x09 87
+    writeArray ram 0x0a 42
+    writeArray ram 0x0b 120
+    writeArray ram 0x0c 201
     return (rom, ram)
 
 loadROMS :: IOUArray Int Word8 -> IO ()
