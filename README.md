@@ -56,6 +56,17 @@ Key mappings:
 I'll try to improve the key mapping but that does mean some faking of the state of
 the shift key and that could have weird side-effects.
 
+Command line options
+```
+    -w <dir> - work from given directory
+
+    -d       - start in debugger
+
+    -c <cmd> - run specified debugger command
+               For example -c '<"game.state"' will load
+               the previously saved state into RAM.
+```
+
 On startup a utility in `utility.bin` is loaded to #9800, just above screen memory. Use `LINK #9800` to install it. This will now give access to `*LOAD "file"` and `*RUN "file"` that will read (and/or execute) files in `.atm` format.
 For example, if Snowball is stored in `software/L9/SNOWBALL/SNOWBALL` you can start it with
 ```

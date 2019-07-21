@@ -70,7 +70,7 @@ loadROMS romArray = do
     readBinary romArray "acorn_roms/Atom_Kernel.rom" (0xf000 - 0xa000)
     readBinary romArray "acorn_roms/Atom_Basic.rom" (0xc000 - 0xa000)
     readBinary romArray "acorn_roms/Atom_FloatingPoint.rom" (0xd000 - 0xa000)
---     readBinary romArray "acorn_roms/Atom_pcharme.rom" (0xa000 - 0xa000)
+    readBinary romArray "acorn_roms/Atom_pcharme.rom" (0xa000 - 0xa000)
 --     readBinary romArray "acorn_roms/Atom_Toolkit.rom" (0xa000 - 0xa000)
 --     readBinary romArray "utility.bin" (0xa000 - 0xa000)
 
@@ -112,8 +112,6 @@ startingState args' = do
         _tex = tex',
         _glProg = prog,
         _glAttrib = attrib,
---         _xscale = fst screenScale',
---         _yscale = snd screenScale',
         _windowWidth = screenWidth,
         _windowHeight = screenHeight
     }
