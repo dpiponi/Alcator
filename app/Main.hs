@@ -32,15 +32,13 @@ import Graphics.UI.GLFW
 import Data.IORef
 import Data.Dequeue
 
-data Args = Args { options :: String,
-                   command :: Maybe String,
+data Args = Args { command :: Maybe String,
                    debugStart :: Bool,
                    workingDirectory :: String } deriving (Show, Data, Typeable)
 
 
 clargs :: Args
-clargs = Args { options = ".alcator-options",
-                command = Nothing,
+clargs = Args { command = Nothing,
                 debugStart = False,
                 workingDirectory = "." }
 
@@ -85,16 +83,11 @@ keyCallback atomState queueRef _window key someInt action mods = do
           done <- updatePPIA key pressed
           unless done $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
 
-startingState :: Args -> IO AcornAtom
-startingState args' = do
+startingState :: IO AcornAtom
+startingState = do
     fontData <- readFont "font.txt"
 
-    let optionsFile = options args'
-
-    putStrLn $ "Reading options from '" ++ optionsFile ++ "'"
-    optionsString <- readFile optionsFile
-    let options' = read optionsString :: Options
-    let screenScale' = screenScale options'
+    let screenScale' = (20, 20)
     let mode = 0
 
     rc <- init -- init video
@@ -121,7 +114,7 @@ startingState args' = do
 main :: IO ()
 main = do
     args' <- cmdArgs clargs
-    state <- startingState args'
+    state <- startingState
     let window = state ^. graphicsState . sdlWindow
 
     let directory = workingDirectory args'

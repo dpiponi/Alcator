@@ -68,10 +68,16 @@ Command line options
 ```
 
 On startup a utility in `utility.bin` is loaded to #9800, just above screen memory. Use `LINK #9800` to install it. This will now give access to `*LOAD "file"` and `*RUN "file"` that will read (and/or execute) files in `.atm` format.
-For example, if Snowball is stored in `software/L9/SNOWBALL/SNOWBALL` you can start it with
+For example, if Level 9 Snowball is stored in `software/L9/SNOWBALL/SNOWBALL` you can start it with
 ```
     LINK #9800
     *RUN "software/L9/SNOWBALL/SNOWBALL"
+```
+and to run Bug-Byte Pinball use
+```
+    LINK #9800
+    *LOAD "software/BB/PINBALL"
+    RUN
 ```
 You can rebuild `utility.bin` using `sh make_os` but you'll need `ca65` installed.
 
