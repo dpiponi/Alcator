@@ -81,6 +81,8 @@ and to run Bug-Byte Pinball use
 ```
 You can rebuild `utility.bin` using `sh make_os` but you'll need `ca65` installed.
 
+A good trick is to use `LINK #9800` and `*LOAD` to load a game and then use `left-alt` and the `>` command to save it before starting.
+
 Screenshots
 -----------
 ![Centipede screenshot](docs/centipede.gif?raw=true "Centipede screenshot")
