@@ -60,7 +60,7 @@ On startup a utility in `utility.bin` is loaded to #9800, just above screen memo
 For example, if Snowball is stored in `software/L9/SNOWBALL/SNOWBALL` you can start it with
 ```
     LINK #9800
-    *RUN "s/L9/SNOWBALL/SNOWBALL"
+    *RUN "software/L9/SNOWBALL/SNOWBALL"
 ```
 You can rebuild `utility.bin` using `sh make_os` but you'll need `ca65` installed.
 
