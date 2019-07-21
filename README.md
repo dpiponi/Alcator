@@ -25,6 +25,26 @@ The code uses `glfw`. You may need to install `homebrew` and then run
 This Acorn Atom is configured with 40K RAM and 24K of ROM.
 It doesn't have a 6522 VIA.
 
+If the keyboard seems unreliable, then the emulator is working properly.
+The original Atom had no keyboard based interrupts and so no keyboard buffer.
+If it polled at the wrong moment it could easily miss your key press.
+
+Key mappings:
+
+| Emulator   | Atom           |
+|------------|----------------|
+| left-alt   | debugger       |
+| right-alt  | REPT           |
+| \`         | quit           |
+| up         | up             |
+| shift-up   | down           |
+| shift-right| left           |
+| right      | right          |
+| page down  | copy           |
+| shift-2    | "              |
+| shift-=    | +              |
+
+
 Screenshots
 -----------
 ![Centipede screenshot](docs/centipede.gif?raw=true "Centipede screenshot")
