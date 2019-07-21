@@ -43,7 +43,18 @@ Key mappings:
 | page down  | copy           |
 | shift-2    | "              |
 | shift-=    | +              |
+| shift-6    | &              |
+| shift-7    | '              |
+| shift-8    | (              |
+| shift-9    | )              |
+| shift--    | =              |
+| =          | :              |
+| shift-=    | *              |
+| shift-=;   | +              |
+| '          | @              |
 
+I'll try to improve the key mapping but that does mean some faking of the state of
+the shift key and that could have weird side-effects.
 
 Screenshots
 -----------
