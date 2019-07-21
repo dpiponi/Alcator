@@ -4,8 +4,6 @@ Options {
     bottomOverscan = 10,
     motionBlurAlpha = 1.0,
 
-    controllerTypes = "Joysticks",
-
     joystick1Left = ["Left"],
     joystick1Right = ["Right"],
     joystick1Up = ["Up"],

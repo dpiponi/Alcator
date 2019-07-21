@@ -186,8 +186,6 @@ data Options = Options {
     bottomOverscan :: Int,
     motionBlurAlpha :: Float,
 
-    controllerTypes :: String,
-
     joystick1Left :: [String],
     joystick1Right :: [String],
     joystick1Up :: [String],
@@ -242,8 +240,6 @@ defaultOptions = Options {
     topOverscan = 10,
     bottomOverscan = 10,
     motionBlurAlpha = 1.0,
-
-    controllerTypes = "Joysticks",
 
     joystick1Left = ["Left"],
     joystick1Right = ["Right"],
