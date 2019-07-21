@@ -32,15 +32,14 @@ import Graphics.UI.GLFW
 import Data.IORef
 import Data.Dequeue
 
-data Args = Args { file :: String, options :: String,
+data Args = Args { options :: String,
                    command :: Maybe String,
                    debugStart :: Bool,
                    workingDirectory :: String } deriving (Show, Data, Typeable)
 
 
 clargs :: Args
-clargs = Args { file = "adventure.bin",
-                options = ".alcator-options",
+clargs = Args { options = ".alcator-options",
                 command = Nothing,
                 debugStart = False,
                 workingDirectory = "." }
@@ -57,6 +56,8 @@ loopEmulation queueRef = do
 
         loopEmulation queueRef
 
+-- 40K RAM
+-- 24K ROM
 createMemory :: IO (IOUArray Int Word8, IOUArray Int Word8)
 createMemory = do
     ram <- newArray (0, 0x9fff) 0 :: IO (IOUArray Int Word8)
@@ -110,8 +111,8 @@ startingState args' = do
         _tex = tex',
         _glProg = prog,
         _glAttrib = attrib,
-        _xscale = fst screenScale',
-        _yscale = snd screenScale',
+--         _xscale = fst screenScale',
+--         _yscale = snd screenScale',
         _windowWidth = screenWidth,
         _windowHeight = screenHeight
     }

@@ -41,8 +41,8 @@ module AcornAtom(
                  putY,
                  putPC,
                  addPC,
-                 xscale,
-                 yscale,
+--                  xscale,
+--                  yscale,
                  load,
                  store,
                  modify,
@@ -91,9 +91,9 @@ data GraphicsState = GraphicsState {
     _glProg :: !GL.Program,
     _glAttrib :: !GL.AttribLocation,
     _windowWidth :: !Int,
-    _windowHeight :: !Int,
-    _xscale :: !Int,
-    _yscale :: !Int
+    _windowHeight :: !Int
+--     _xscale :: !Int,
+--     _yscale :: !Int
 }
 
 $(makeLenses ''GraphicsState)
