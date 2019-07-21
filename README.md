@@ -83,6 +83,8 @@ You can rebuild `utility.bin` using `sh make_os` but you'll need `ca65` installe
 
 A good trick is to use `LINK #9800` and `*LOAD` to load a game and then use `left-alt` and the `>` command to save it before starting.
 
+(Note: it's possible some applications will want memory above #9800 and cause a conflict.)
+
 Screenshots
 -----------
 ![Centipede screenshot](docs/centipede.gif?raw=true "Centipede screenshot")
