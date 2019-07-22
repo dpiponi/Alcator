@@ -4,7 +4,7 @@ import Data.Int
 
 screenWidth, screenHeight :: Int
 screenWidth = 32
-screenHeight = 16
+screenHeight = 24
 
 fps :: Int64
 fps = 60
