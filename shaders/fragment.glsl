@@ -23,19 +23,17 @@ float testbit(int byte, int bit) {
   return mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;
 }
 
-float brite(float y) { float w=0.5*0.5*0.125;return w*floor(y)+min(y-floor(y),w); }
-
 vec4 colour(int bits) {
-        if (bits == 0) {
-            return vec4(0.0, 1.0, 0.0, 1.0);
-        } else if (bits == 1) {
-            return vec4(1.0, 1.0, 0.0, 1.0);
-        } else if (bits == 2) {
-            return vec4(0.0, 0.0, 1.0, 1.0);
-        } else {
-            return vec4(1.0, 0.0, 0.0, 1.0);
-        }
+    if (bits == 0) {
+        return vec4(0.0, 1.0, 0.0, 1.0);
+    } else if (bits == 1) {
+        return vec4(1.0, 1.0, 0.0, 1.0);
+    } else if (bits == 2) {
+        return vec4(0.0, 0.0, 1.0, 1.0);
+    } else {
+        return vec4(1.0, 0.0, 0.0, 1.0);
     }
+}
 
 uniform sampler2D current_frame;
 uniform sampler2D table;
@@ -43,12 +41,23 @@ uniform sampler2D last_frame;
 uniform float mode;
 varying vec2 texcoord;
 
+float scanline(float y) {
+    float w=0.5*0.5*0.125;
+    return w*floor(y)+min(y-floor(y),w);
+}
+
+float scanline_aa(float y) {
+    float h=1.0*dFdy(191.*y);
+    return 1.-(scanline(192.*y+0.5*h)-scanline(192.*y-0.5*h))/h;
+}
+
 void main()
 {
 
     if (mode == 0.0) {
-        float h=1.0*dFdy(191.*texcoord.y);
-        float bb = 1.-(brite(192.*texcoord.y+0.5*h)-brite(192.*texcoord.y-0.5*h))/h;
+//        float h=1.0*dFdy(191.*texcoord.y);
+//        float bb = 1.-(scanline(192.*texcoord.y+0.5*h)-scanline(192.*texcoord.y-0.5*h))/h;
+        float bb = scanline_aa(texcoord.y);
         int x = int(32.*8.*texcoord.x);
         int y = int(16.*12.*texcoord.y);
         int ix = x/8;
@@ -119,7 +128,7 @@ void main()
         gl_FragColor = vec4(z, z, z, 1.0);
     } else if (mode == 208.0 || true) { // 4a
         float h=1.0*dFdy(191.*texcoord.y);
-        float bb = 1.-(brite(192.*texcoord.y+0.5*h)-brite(192.*texcoord.y-0.5*h))/h;
+        float bb = 1.-(scanline(192.*texcoord.y+0.5*h)-scanline(192.*texcoord.y-0.5*h))/h;
         int x = int(128.*texcoord.x);
         int y = int(192.*texcoord.y);
         int ix = x/4;
