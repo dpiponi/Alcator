@@ -118,6 +118,8 @@ void main()
         float z = testbit(byte, fx);
         gl_FragColor = vec4(z, z, z, 1.0);
     } else if (mode == 208.0 || true) { // 4a
+        float h=1.4*dFdy(191.*texcoord.y);
+        float bb = 1.-(brite(192.*texcoord.y+0.5*h)-brite(192.*texcoord.y-0.5*h))/h;
         int x = int(128.*texcoord.x);
         int y = int(192.*texcoord.y);
         int ix = x/4;
@@ -130,16 +132,7 @@ void main()
         int px = int(pow(2., float(2*fx)));
         int bits = mod(float(byte), float(2*px)) >= float(px) ? 1 : 0;
         bits += mod(float(byte), float(4*px)) >= float(2*px) ? 2 : 0;
-        gl_FragColor = colour(bits);
-           if (bits == 0) {
-               gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-           } else if (bits == 1) {
-               gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
-           } else if (bits == 2) {
-               gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
-           } else {
-               gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-           }
+        gl_FragColor = bb*colour(bits);
     }
 }
 
