@@ -94,7 +94,7 @@ startingState :: IO AcornAtom
 startingState = do
     fontData <- readFont "font.txt"
 
-    let screenScale' = (20, 20)
+    let screenScale' = (4, 4)
     let mode = 0
 
     rc <- init -- init video

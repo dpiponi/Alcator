@@ -23,7 +23,7 @@ float testbit(int byte, int bit) {
   return mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;
 }
 
-float brite(float y) { float w=0.5*0.125;return w*floor(y)+min(y-floor(y),w); }
+float brite(float y) { float w=0.5*0.5*0.125;return w*floor(y)+min(y-floor(y),w); }
 
 vec4 colour(int bits) {
         if (bits == 0) {
@@ -47,7 +47,7 @@ void main()
 {
 
     if (mode == 0.0) {
-        float h=1.4*dFdy(191.*texcoord.y);
+        float h=1.0*dFdy(191.*texcoord.y);
         float bb = 1.-(brite(192.*texcoord.y+0.5*h)-brite(192.*texcoord.y-0.5*h))/h;
         int x = int(32.*8.*texcoord.x);
         int y = int(16.*12.*texcoord.y);
@@ -118,7 +118,7 @@ void main()
         float z = testbit(byte, fx);
         gl_FragColor = vec4(z, z, z, 1.0);
     } else if (mode == 208.0 || true) { // 4a
-        float h=1.4*dFdy(191.*texcoord.y);
+        float h=1.0*dFdy(191.*texcoord.y);
         float bb = 1.-(brite(192.*texcoord.y+0.5*h)-brite(192.*texcoord.y-0.5*h))/h;
         int x = int(128.*texcoord.x);
         int y = int(192.*texcoord.y);
