@@ -43,26 +43,21 @@ varying vec2 texcoord;
 
 float scanline(float y) {
     float w=0.5*0.5*0.125;
+    y -= 0.25*w;
     return w*floor(y)+min(y-floor(y),w);
 }
 
-float scanline_aa(float y) {
-    float h=1.0*dFdy(191.*y);
-    return 1.-(scanline(192.*y+0.5*h)-scanline(192.*y-0.5*h))/h;
-}
-
-float scanline_aa_128(float y) {
-    float h=1.0*dFdy(128.*y);
-    return 1.-(scanline(128.*y+0.5*h)-scanline(128.*y-0.5*h))/h;
+float scanline_aa(float y, float h) {
+    float j=1.0*dFdy((h-1.0)*y);
+    return 1.-(scanline(h*y+0.5*j)-scanline(h*y-0.5*j))/j;
 }
 
 void main()
 {
-
+    float bb;
+    vec4 col;
     if (mode == 0.0) {
-//        float h=1.0*dFdy(191.*texcoord.y);
-//        float bb = 1.-(scanline(192.*texcoord.y+0.5*h)-scanline(192.*texcoord.y-0.5*h))/h;
-        float bb = scanline_aa(texcoord.y);
+        bb = scanline_aa(texcoord.y, 192.);
         int x = int(32.*8.*texcoord.x);
         int y = int(16.*12.*texcoord.y);
         int ix = x/8;
@@ -79,9 +74,9 @@ void main()
         int px = 8*cx+fx;
         int py = 12*cy+fy;
         float z = bb*texture2D(table, vec2(float(px)/255.0, float(py)/95.0)).x;
-        gl_FragColor = vec4(z, z, z, 1.0);
+        col = vec4(z, z, z, 1.0);
     } else if (mode == 48.0) {
-        float bb = scanline_aa_128(texcoord.y);
+        bb = scanline_aa(texcoord.y, 128.);
         int x = int(128.*texcoord.x);
         int y = int(64.*texcoord.y);
         int ix = x/8;
@@ -93,9 +88,9 @@ void main()
         int byte = int(255.0*last_index.x);
         int px = int(pow(2., float(fx)));
         float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;
-        gl_FragColor = bb*vec4(z, z, z, 1.0);
+        col = vec4(z, z, z, 1.0);
     } else if (mode == 112.0) {
-        float bb = scanline_aa(texcoord.y);
+        bb = scanline_aa(texcoord.y, 192.);
         int x = int(128.*texcoord.x);
         int y = int(96.*texcoord.y);
         int ix = x/8;
@@ -107,9 +102,9 @@ void main()
         int byte = int(255.0*last_index.x);
         int px = int(pow(2., float(fx)));
         float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;
-        gl_FragColor = bb*vec4(z, z, z, 1.0);
+        col = vec4(z, z, z, 1.0);
     } else if (mode == 176.0) {
-        float bb = scanline_aa(texcoord.y);
+        bb = scanline_aa(texcoord.y, 192.);
         int x = int(128.*texcoord.x);
         int y = int(192.*texcoord.y);
         int ix = x/8;
@@ -121,9 +116,9 @@ void main()
         int byte = int(255.0*last_index.x);
         int px = int(pow(2., float(fx)));
         float z = mod(float(byte), float(2*px)) >= float(px) ? 1.0 : 0.0;
-        gl_FragColor = bb*vec4(z, z, z, 1.0);
+        col = vec4(z, z, z, 1.0);
     } else if (mode == 240.0) { // 4
-        float bb = scanline_aa(texcoord.y);
+        bb = scanline_aa(texcoord.y, 192.);
         int x = int(256.*texcoord.x);
         int y = int(192.*texcoord.y);
         int ix = x/8;
@@ -134,11 +129,9 @@ void main()
         vec4 last_index = texture2D(current_frame, vec2(float(tx)/128., float(ty)/128.));
         int byte = int(255.0*last_index.x);
         float z = testbit(byte, fx);
-        gl_FragColor = bb*vec4(z, z, z, 1.0);
+        col = vec4(z, z, z, 1.0);
     } else if (mode == 208.0 || true) { // 4a
-//        float h=1.0*dFdy(191.*texcoord.y);
-//        float bb = 1.-(scanline(192.*texcoord.y+0.5*h)-scanline(192.*texcoord.y-0.5*h))/h;
-        float bb = scanline_aa(texcoord.y);
+        bb = scanline_aa(texcoord.y, 192.);
         int x = int(128.*texcoord.x);
         int y = int(192.*texcoord.y);
         int ix = x/4;
@@ -151,7 +144,8 @@ void main()
         int px = int(pow(2., float(2*fx)));
         int bits = mod(float(byte), float(2*px)) >= float(px) ? 1 : 0;
         bits += mod(float(byte), float(4*px)) >= float(2*px) ? 2 : 0;
-        gl_FragColor = bb*colour(bits);
+        col = colour(bits);
     }
+    gl_FragColor = bb*col;
 }
 
