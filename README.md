@@ -73,6 +73,7 @@ On startup a utility in `utility.bin` is loaded to #9800, just above screen memo
 For example, if Level 9 Snowball is stored in `software/L9/SNOWBALL/SNOWBALL` you can start it with
 ```
     LINK #9800
+    *RUN "software/L9/SNOWBALL/VDUBLO"
     *RUN "software/L9/SNOWBALL/SNOWBALL"
 ```
 and to run Bug-Byte Pinball use
@@ -85,7 +86,7 @@ You can rebuild `utility.bin` using `sh make_os` but you'll need `ca65` installe
 
 A good trick is to use `LINK #9800` and `*LOAD` to load a game and then use `left-alt` and the `>` command to save it before starting.
 
-(Note: it's possible some applications will want memory above #9800 and cause a conflict.)
+(Note: it's possible some applications will want memory above #9800 and cause a conflict. Eg. games often load at #8200.)
 
 Screenshots
 -----------
