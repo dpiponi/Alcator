@@ -31,6 +31,7 @@ library
                      , dequeue
                      , vector
                      , OpenGL
+                     , ordered-containers
                      , array
                      , bytestring
                      , mtl
@@ -53,6 +54,7 @@ executable alcator
   build-depends:       base
                      , GLFW-b
                      , clock
+                     , ordered-containers
                      , stm
                      , bytestring
                      , dequeue

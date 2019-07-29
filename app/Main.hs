@@ -12,8 +12,12 @@ import Prelude hiding (last, init, null)
 import AcornAtom hiding (ram, rom)
 import Binary
 import Control.Monad
+import qualified Data.Array as A
 import Control.Monad.Reader
+import qualified Data.Foldable as F
 import Data.Array.IO
+import Data.IORef
+import qualified Data.Set.Ordered as O
 import System.Directory
 import Control.Lens
 import Data.Binary hiding (get)
@@ -77,16 +81,16 @@ loadROMS romArray = do
 --     readBinary romArray "acorn_roms/Atom_Toolkit.rom" (0xa000 - 0xa000)
 --     readBinary romArray "utility.bin" (0xa000 - 0xa000)
 
-keyCallback :: AcornAtom -> TQueue UIKey
+keyCallback :: IORef (O.OSet Key) -> AcornAtom -> TQueue UIKey
              -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
-keyCallback atomState queue _window key someInt action mods = do
+keyCallback key_set atomState queue _window key someInt action mods = do
   let pressed = isPressed action
   flip runReaderT atomState $ unM $ 
     case key of
       Key'RightAlt -> updateRept pressed
       _ -> do
-          done <- updatePPIA key pressed
-          unless done $ liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods)
+          done <- newUpdatePPIA key_set key pressed
+          liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods)
 
 startingState :: IO AcornAtom
 startingState = do
@@ -128,7 +132,8 @@ main = do
     --  Not at all clear this should work with GLFW
     --  though it appears to on OSX and Linux
     queue <- newTQueueIO
-    setKeyCallback window (Just (keyCallback state queue))
+    key_set <- newIORef O.empty
+    setKeyCallback window (Just (keyCallback key_set state queue))
     void $ forkIO $ forever pollEvents
 
     withCurrentDirectory directory $
