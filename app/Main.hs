@@ -21,6 +21,8 @@ import Debugger
 import System.Exit
 import Display
 import Control.Concurrent
+import Control.Concurrent.STM
+-- import Control.Concurrent.STM.TQueue
 import Emulation
 import Events
 import Keys
@@ -29,8 +31,7 @@ import Stella
 import Step
 import System.Console.CmdArgs hiding ((+=))
 import Graphics.UI.GLFW
-import Data.IORef
-import Data.Dequeue
+-- import Data.IORef
 
 data Args = Args { command :: Maybe String,
                    debugStart :: Bool,
@@ -42,17 +43,17 @@ clargs = Args { command = Nothing,
                 debugStart = False,
                 workingDirectory = "." }
 
-loopEmulation :: IORef (BankersDequeue UIKey) -> MonadAcorn ()
-loopEmulation queueRef = do
-        queue <- liftIO $ readIORef queueRef
-        unless (null queue) $ do
-            let Just (queuedKey, queue') = popFront queue
-            liftIO $ writeIORef queueRef queue'
-            let UIKey {uiKey = key, uiState = motion} = queuedKey
-            handleKey motion key
+loopEmulation :: TQueue UIKey -> MonadAcorn ()
+loopEmulation queue = do
+        maybeKey <- liftIO $ atomically $ tryReadTQueue queue
+        case maybeKey of
+            Nothing -> return ()
+            Just queuedKey -> do
+                let UIKey {uiKey = key, uiState = motion} = queuedKey
+                handleKey motion key
         loopUntil 1000
 
-        loopEmulation queueRef
+        loopEmulation queue
 
 -- 40K RAM
 -- 24K ROM
@@ -79,16 +80,16 @@ loadROMS romArray = do
 --     readBinary romArray "acorn_roms/Atom_Toolkit.rom" (0xa000 - 0xa000)
 --     readBinary romArray "utility.bin" (0xa000 - 0xa000)
 
-keyCallback :: AcornAtom -> IORef (BankersDequeue UIKey)
+keyCallback :: AcornAtom -> TQueue UIKey
              -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
-keyCallback atomState queueRef _window key someInt action mods = do
+keyCallback atomState queue _window key someInt action mods = do
   let pressed = isPressed action
   flip runReaderT atomState $ unM $ 
     case key of
       Key'RightAlt -> updateRept pressed
       _ -> do
           done <- updatePPIA key pressed
-          unless done $ liftIO $ atomicModifyIORef' queueRef (\q -> (pushBack q (UIKey key someInt action mods), ()))
+          unless done $ liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods)
 
 startingState :: IO AcornAtom
 startingState = do
@@ -129,8 +130,8 @@ main = do
 
     --  Not at all clear this should work with GLFW
     --  though it appears to on OSX and Linux
-    queueRef <- newIORef @(BankersDequeue UIKey) empty
-    setKeyCallback window (Just (keyCallback state queueRef))
+    queue <- newTQueueIO
+    setKeyCallback window (Just (keyCallback state queue))
     void $ forkIO $ forever pollEvents
 
     withCurrentDirectory directory $
@@ -141,7 +142,7 @@ main = do
                 Just c -> void $ execLine c
             when (debugStart args') runDebugger
             resetNextFrame
-            loopEmulation queueRef
+            loopEmulation queue
 
     destroyWindow window
     -- XXX Free malloced data?

@@ -26,7 +26,6 @@ library
                        -- Events
   build-depends:       base
                      , GLFW-b
-                     , dequeue
                      , clock
                      , bytestring
                      , dequeue
@@ -54,7 +53,7 @@ executable alcator
   build-depends:       base
                      , GLFW-b
                      , clock
-                     , dequeue
+                     , stm
                      , bytestring
                      , dequeue
                      , vector
