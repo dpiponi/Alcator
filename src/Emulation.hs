@@ -65,16 +65,13 @@ import Control.Lens hiding (set, op, index, noneOf)
 import Control.Monad.Reader
 import Data.Array.IO hiding (index)
 import Data.Bits hiding (bit)
--- import Data.ByteString hiding (putStrLn, putStr, index)
 import Data.Char
 import Data.IORef
 import Data.Int
--- import Data.Maybe
 import Data.Word
 import DebugState
 import Disasm hiding (make16)
 import Display
--- import Foreign.Ptr
 import Foreign.Storable
 import Graphics.UI.GLFW hiding (getTime)
 import Memory
@@ -88,7 +85,6 @@ import Text.Parsec
 import Text.Printf
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BS (c2w, w2c)
--- import qualified Graphics.Rendering.OpenGL as GL
 
 readMemory :: Word16 -> MonadAcorn Word8
 illegal :: Word8 -> MonadAcorn ()
@@ -162,10 +158,10 @@ data Command = LOAD String Int -- <-- XXX needs to me Maybe Int
 
 number :: Stream s m t => Int -> ParsecT s u m Char -> ParsecT s u m Int
 number base baseDigit
-    = do { digits <- many1 baseDigit
-         ; let n = Prelude.foldl (\x d -> base*x + digitToInt d) 0 digits
-         ; seq n (return n)
-         }
+    = do
+        digits <- many1 baseDigit
+        let n = Prelude.foldl (\x d -> base*x + digitToInt d) 0 digits
+        seq n (return n)
 
 filename_literal :: ParsecT String u Identity String
 filename_literal = (char '"' >> (many1 (noneOf "\"") <* char '"'))
