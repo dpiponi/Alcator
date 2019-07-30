@@ -195,6 +195,19 @@ translate :: Char -> Char
 translate x | x == chr 10 = chr 13
 translate x = x
 
+pasteKey :: Window -> TQueue Word8 -> MonadAcorn ()
+pasteKey window key_buffer' = do
+  liftIO $ print "Paste!"
+  s <- liftIO $ getClipboardString window
+  case s of
+    Nothing -> return ()
+    Just t ->
+        forM_ (map translate t) $ \k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+
+superKey :: Window -> TQueue Word8 -> Key -> MonadAcorn ()
+superKey window key_buffer' Key'V = pasteKey window key_buffer'
+superKey _ _ _ = return ()
+
 keyCallback :: TQueue Word8 -> IORef (O.OSet Key) -> AcornAtom -> TQueue UIKey
              -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
 keyCallback key_buffer' key_set atomState queue window key someInt action mods = do
@@ -202,15 +215,7 @@ keyCallback key_buffer' key_set atomState queue window key someInt action mods =
   let pressed = isPressed action
   flip runReaderT atomState $ unM $ 
     if modifierKeysSuper mods && action == KeyState'Pressed
-      then case key of
-        Key'V -> do
-          liftIO $ print "Paste!"
-          s <- liftIO $ getClipboardString window
-          case s of
-            Nothing -> return ()
-            Just t ->
-                forM_ (map translate t) $ \k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
-        otherwise -> return ()
+      then superKey window key_buffer' key
       else do
           t <- liftIO $ getTime Realtime
           liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods t)
