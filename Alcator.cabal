@@ -27,6 +27,7 @@ library
   build-depends:       base
                      , GLFW-b
                      , clock
+                     , stm
                      , bytestring
                      , dequeue
                      , vector

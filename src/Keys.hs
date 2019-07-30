@@ -1,6 +1,7 @@
 module Keys where
 
 import Graphics.UI.GLFW
+import System.Clock
 
 keyNames :: [(String, Key)]
 keyNames = [
@@ -191,5 +192,6 @@ defaultOptions = Options {
 data UIKey = UIKey { uiKey :: Key,
                      uiScancode :: Int,
                      uiState :: KeyState,
-                     uiMods :: ModifierKeys
+                     uiMods :: ModifierKeys,
+                     uiTime :: TimeSpec
                    } deriving Show

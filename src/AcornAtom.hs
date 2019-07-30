@@ -12,6 +12,7 @@ module AcornAtom(
                  AcornAtom(..),
                  GraphicsState(..),
                  graphicsState,
+                 key_buffer,
                  withAtom,
                  getX,
                  putX,
@@ -83,6 +84,8 @@ import GHC.Generics
 import qualified Graphics.Rendering.OpenGL as GL
 import Asm
 import Codec.Serialise
+import Control.Concurrent
+import Control.Concurrent.STM
 
 -- Need to make left and right separately configurable
 data GraphicsState = GraphicsState {
@@ -113,7 +116,9 @@ data AcornAtom = AcornAtom {
     _word16Array :: Segment Word16,
     _word64Array :: Segment Word64,
 
-    _graphicsState :: GraphicsState
+    _graphicsState :: GraphicsState,
+
+    _key_buffer :: TQueue Word8
 }
 
 $(makeLenses ''AcornAtom)
@@ -163,37 +168,6 @@ frozen AcornAtom {
             _s_word8Array=Data.Array.elems word8Array1,
             _s_word16Array=Data.Array.elems word16Array1,
             _s_word64Array=Data.Array.elems word64Array1 }
-
--- thawedLike :: AcornAtom -> SerialisableAcornAtom -> IO AcornAtom
--- thawedLike atom SerialisableAcornAtom {
---             _s_clock=clock0,
---             _s_nextFrameTime=nextFrameTime0,
---             _s_ram=ram0,
---             _s_rom=rom0,
---             _s_boolArray=boolArray0,
---             _s_intArray=intArray0,
---             _s_word8Array=word8Array0,
---             _s_word16Array=word16Array0,
---             _s_word64Array=word64Array0 } = do
---                 clock1 <- newIORef clock0
---                 nextFrameTime1 <- newIORef nextFrameTime0
---                 ram1 <- newListArray (0, 0x5fff) ram0
---                 rom1 <- newListArray (0, 0x9fff) rom0
---                 boolArray1 <- newListArray (0, maxBool) boolArray0
---                 intArray1 <- newListArray (0, maxInt) intArray0
---                 word8Array1 <- newListArray (0, maxWord8) word8Array0
---                 word16Array1 <- newListArray (0, maxWord16) word16Array0
---                 word64Array1 <- newListArray (0, maxWord64) word64Array0
---                 return atom {
---                     _clock=clock1,
---                     _nextFrameTime=nextFrameTime1,
---                     _ram=ram1,
---                     _rom=rom1,
---                     _boolArray=boolArray1,
---                     _intArray=intArray1,
---                     _word8Array=word8Array1,
---                     _word16Array=word16Array1,
---                     _word64Array=word64Array1 }
 
 copyArray :: (MArray a e m, Ix i, Num i, Enum i) =>
                    a i e -> [e] -> m ()

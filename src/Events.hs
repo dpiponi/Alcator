@@ -191,18 +191,30 @@ doKey Key'PageDown     shift = (shift, keyBit 5 1 False)                   -- CO
 
 doKey key              shift = (shift, id)
 
-newUpdatePPIA :: IORef (O.OSet Key) -> Key -> Bool -> MonadAcorn Bool
-newUpdatePPIA key_set key pressed = do
-  if pressed
-    then liftIO $ modifyIORef key_set (O.|> key)
-    else liftIO $ modifyIORef key_set (O.delete key)
-  s <- liftIO $ readIORef key_set
+rowsFromKeys :: O.OSet Key -> MonadAcorn ()
+rowsFromKeys keys = do
   let rows = A.array (0, 9) [(i, 0xff) | i <- [0..9]]
---   liftIO $ print (F.toList s)
-  let (_, rows') = foldr applyKey (False, rows) (reverse $ F.toList s)
+--   liftIO $ print (F.toList keys)
+  let (_, rows') = foldr applyKey (False, rows) (reverse $ F.toList keys)
 --   liftIO $ print rows'
   forM_ [0..9] $ \row -> do
     store (keyboard_matrix + TO row) (rows' A.! row)
+
+isMod Key'LeftShift = True
+isMod Key'RightShift = True
+isMod Key'LeftControl = True
+isMod _ = False
+
+newUpdatePPIA :: IORef (O.OSet Key) -> Key -> Bool -> MonadAcorn Bool
+newUpdatePPIA key_set key pressed = do
+  if pressed
+    then do -- in order
+        when (not (isMod key)) $ liftIO $ modifyIORef key_set (O.filter isMod)
+        liftIO $ modifyIORef key_set (O.|> key)
+    else liftIO $ modifyIORef key_set (O.delete key)
+  keys <- liftIO $ readIORef key_set
+--   liftIO $ print keys
+  rowsFromKeys keys
 
   return False
 

@@ -67,6 +67,7 @@ import Data.Array.IO hiding (index)
 import Data.Bits hiding (bit)
 import Data.Char
 import Data.IORef
+import Control.Concurrent.STM
 import Data.Int
 import Data.Word
 import DebugState
@@ -334,10 +335,23 @@ oscli = do
     case cmd'' of
         Right cmd''' -> execStarCommand cmd'''
         Left _ -> do
-            liftIO $ putStrLn $  "Unknow * command:" ++ cmd
+            liftIO $ putStrLn $  "Unknown * command:" ++ cmd
             p0 <- getPC
             putPC $ p0+2
     return ()
+
+osrdch :: MonadAcorn ()
+osrdch = do
+    key_buffer' <- view key_buffer
+    mKey <- liftIO $ atomically $ tryReadTQueue key_buffer'
+    case mKey of
+        Nothing -> do
+            putC True
+        Just key -> do
+            putA key
+            putC False
+    p0 <- getPC
+    putPC $ p0+2
 
 -- {- INLINE illegal -}
 illegal i =
@@ -348,11 +362,12 @@ illegal i =
         putPC $ pp-1
         p0 <- getPC
         op <- readMemory (p0+1)
-        if op == 0x04
-          then oscli
-          else do
-            putPC $ p0+2
-            liftIO $ putStrLn $ "Host call with op 0x" ++ showHex op ""
+        case op of
+            0x04 -> oscli
+            0x05 -> osrdch
+            otherwise -> do 
+              putPC $ p0+2
+              liftIO $ putStrLn $ "Host call with op 0x" ++ showHex op ""
       else do
         dumpState
         error $ "Illegal opcode 0x" ++ showHex i ""
@@ -839,8 +854,9 @@ initState :: IOUArray Int Word8 ->
              IOUArray Int Word8 ->
              Word16 ->
              GraphicsState ->
+             TQueue Word8 ->
              IO AcornAtom
-initState ram' rom' initialPC graphicsState' = do
+initState ram' rom' initialPC graphicsState' key_buffer' = do
           stellaDebug' <- newIORef DebugState.start
           t <- liftIO $ getTime Realtime
           let nt = addTime t (1000000000 `div` 60)
@@ -863,7 +879,8 @@ initState ram' rom' initialPC graphicsState' = do
               _word64Array = word64Array',
               _word16Array = word16Array',
               _word8Array = word8Array',
-              _graphicsState = graphicsState'
+              _graphicsState = graphicsState',
+              _key_buffer = key_buffer'
           }
 
 -- {-# INLINE pureReadRom #-}
