@@ -201,21 +201,22 @@ keyCallback key_buffer' key_set atomState queue window key someInt action mods =
 --   print key
   let pressed = isPressed action
   flip runReaderT atomState $ unM $ 
-    case key of
-      Key'RightAlt -> updateRept pressed
-      _ -> do
+    if modifierKeysSuper mods && action == KeyState'Pressed
+      then case key of
+        Key'V -> do
+          liftIO $ print "Paste!"
+          s <- liftIO $ getClipboardString window
+          case s of
+            Nothing -> return ()
+            Just t ->
+                forM_ (map translate t) $ \k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+        otherwise -> return ()
+      else do
           t <- liftIO $ getTime Realtime
           liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods t)
-          if (key == Key'V && modifierKeysSuper mods && action == KeyState'Pressed)
-              then do
-                s <- liftIO $ getClipboardString window
-                case s of
-                    Nothing -> return ()
-                    Just t ->
-                        forM_ (map translate t) $ \k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
-              else case interpretKey key action mods of
-                    Nothing -> return ()
-                    Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+          case interpretKey key action mods of
+            Nothing -> return ()
+            Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
 
 startingState :: TQueue Word8 -> IO AcornAtom
 startingState key_buffer' = do
