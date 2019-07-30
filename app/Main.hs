@@ -217,12 +217,6 @@ keyCallback key_buffer' key_set atomState queue window key someInt action mods =
                     Nothing -> return ()
                     Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
 
--- charCallback :: TQueue Word8 -> Window -> Char -> IO ()
--- charCallback key_buffer' _window key = do
---   print key
---   atomically $ writeTQueue key_buffer' (BS.c2w key)
-
-
 startingState :: TQueue Word8 -> IO AcornAtom
 startingState key_buffer' = do
     fontData <- readFont "font.txt"
