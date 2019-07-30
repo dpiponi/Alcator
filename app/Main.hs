@@ -49,19 +49,25 @@ clargs = Args { command = Nothing,
                 debugStart = False,
                 workingDirectory = "." }
 
-loopEmulation :: IORef (O.OSet Key) -> TQueue UIKey -> MonadAcorn ()
-loopEmulation key_set queue = do
+loopEmulation :: Window -> TQueue Word8 ->IORef (O.OSet Key) -> TQueue UIKey -> MonadAcorn ()
+loopEmulation window key_buffer' key_set queue = do
         maybeKey <- liftIO $ atomically $ tryReadTQueue queue
         case maybeKey of
             Nothing -> return ()
             Just queuedKey -> do
-                let UIKey {uiKey = key, uiState = motion} = queuedKey
+                let UIKey {uiKey = key, uiState = motion, uiMods = mods} = queuedKey
 --                 liftIO $ print (key, motion)
-                newUpdatePPIA key_set key (isPressed motion)
-                handleKey motion key
+                if modifierKeysSuper mods && motion == KeyState'Pressed
+                  then superKey window key_buffer' key
+                  else do
+                    case interpretKey key motion mods of
+                      Nothing -> return ()
+                      Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+                    newUpdatePPIA key_set key (isPressed motion)
+                    handleKey motion key
         loopUntil 1000
 
-        loopEmulation key_set queue
+        loopEmulation window key_buffer' key_set queue
 
 -- 40K RAM
 -- 24K ROM
@@ -210,18 +216,10 @@ superKey _ _ _ = return ()
 
 keyCallback :: TQueue Word8 -> IORef (O.OSet Key) -> AcornAtom -> TQueue UIKey
              -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
-keyCallback key_buffer' key_set atomState queue window key someInt action mods = do
---   print key
-  let pressed = isPressed action
-  flip runReaderT atomState $ unM $ 
-    if modifierKeysSuper mods && action == KeyState'Pressed
-      then superKey window key_buffer' key
-      else do
-          t <- liftIO $ getTime Realtime
-          liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods t)
-          case interpretKey key action mods of
-            Nothing -> return ()
-            Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+keyCallback key_buffer' key_set atomState queue window key someInt action mods =
+  flip runReaderT atomState $ unM $ do
+        t <- liftIO $ getTime Realtime
+        liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods t)
 
 startingState :: TQueue Word8 -> IO AcornAtom
 startingState key_buffer' = do
@@ -277,7 +275,7 @@ main = do
                 Just c -> void $ execLine c
             when (debugStart args') runDebugger
             resetNextFrame
-            loopEmulation key_set queue
+            loopEmulation window key_buffer' key_set queue
 
     destroyWindow window
     -- XXX Free malloced data?
