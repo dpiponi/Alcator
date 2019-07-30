@@ -191,9 +191,13 @@ interpretKey Key'Space _ ModifierKeys {modifierKeysShift=False} = Just ' '
 
 interpretKey _ _ _ = Nothing
 
+translate :: Char -> Char
+translate x | x == chr 10 = chr 13
+translate x = x
+
 keyCallback :: TQueue Word8 -> IORef (O.OSet Key) -> AcornAtom -> TQueue UIKey
              -> Window -> Key -> Int -> KeyState -> ModifierKeys -> IO ()
-keyCallback key_buffer' key_set atomState queue _window key someInt action mods = do
+keyCallback key_buffer' key_set atomState queue window key someInt action mods = do
 --   print key
   let pressed = isPressed action
   flip runReaderT atomState $ unM $ 
@@ -202,9 +206,16 @@ keyCallback key_buffer' key_set atomState queue _window key someInt action mods 
       _ -> do
           t <- liftIO $ getTime Realtime
           liftIO $ atomically $ writeTQueue queue (UIKey key someInt action mods t)
-          case interpretKey key action mods of
-            Nothing -> return ()
-            Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+          if (key == Key'V && modifierKeysSuper mods && action == KeyState'Pressed)
+              then do
+                s <- liftIO $ getClipboardString window
+                case s of
+                    Nothing -> return ()
+                    Just t ->
+                        forM_ (map translate t) $ \k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
+              else case interpretKey key action mods of
+                    Nothing -> return ()
+                    Just k -> liftIO $ atomically $ writeTQueue key_buffer' (BS.c2w k)
 
 -- charCallback :: TQueue Word8 -> Window -> Char -> IO ()
 -- charCallback key_buffer' _window key = do
