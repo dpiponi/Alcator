@@ -2,6 +2,7 @@ module Keys where
 
 import Graphics.UI.GLFW
 import System.Clock
+import Data.Char
 
 keyNames :: [(String, Key)]
 keyNames = [
@@ -195,3 +196,115 @@ data UIKey = UIKey { uiKey :: Key,
                      uiMods :: ModifierKeys,
                      uiTime :: TimeSpec
                    } deriving Show
+
+interpretKey :: Key -> KeyState -> ModifierKeys -> Maybe Char
+interpretKey Key'Up KeyState'Pressed _ = Just (chr 11)
+interpretKey Key'Down KeyState'Pressed _ = Just (chr 10)
+interpretKey Key'Left KeyState'Pressed _ = Just (chr 8)
+interpretKey Key'Right KeyState'Pressed _ = Just (chr 9)
+-- interpretKey Key'PageDown KeyState'Pressed _ = Just (chr 15)
+interpretKey Key'L KeyState'Pressed ModifierKeys {modifierKeysControl=True} = Just (chr 12)
+
+interpretKey _ KeyState'Released _ = Nothing
+
+interpretKey Key'1 _ ModifierKeys {modifierKeysShift=False} = Just '1'
+interpretKey Key'1 _ ModifierKeys {modifierKeysShift=True} = Just '!'
+interpretKey Key'2 _ ModifierKeys {modifierKeysShift=False} = Just '2'
+interpretKey Key'2 _ ModifierKeys {modifierKeysShift=True} = Just '@'
+interpretKey Key'3 _ ModifierKeys {modifierKeysShift=False} = Just '3'
+interpretKey Key'3 _ ModifierKeys {modifierKeysShift=True} = Just '#'
+interpretKey Key'4 _ ModifierKeys {modifierKeysShift=False} = Just '4'
+interpretKey Key'4 _ ModifierKeys {modifierKeysShift=True} = Just '$'
+interpretKey Key'5 _ ModifierKeys {modifierKeysShift=False} = Just '5'
+interpretKey Key'5 _ ModifierKeys {modifierKeysShift=True} = Just '%'
+interpretKey Key'6 _ ModifierKeys {modifierKeysShift=False} = Just '6'
+interpretKey Key'6 _ ModifierKeys {modifierKeysShift=True} = Just '^'
+interpretKey Key'7 _ ModifierKeys {modifierKeysShift=False} = Just '7'
+interpretKey Key'7 _ ModifierKeys {modifierKeysShift=True} = Just '&'
+interpretKey Key'8 _ ModifierKeys {modifierKeysShift=False} = Just '8'
+interpretKey Key'8 _ ModifierKeys {modifierKeysShift=True} = Just '*'
+interpretKey Key'9 _ ModifierKeys {modifierKeysShift=False} = Just '9'
+interpretKey Key'9 _ ModifierKeys {modifierKeysShift=True} = Just '('
+interpretKey Key'0 _ ModifierKeys {modifierKeysShift=False} = Just '0'
+interpretKey Key'0 _ ModifierKeys {modifierKeysShift=True} = Just ')'
+interpretKey Key'Minus _ ModifierKeys {modifierKeysShift=False} = Just '-'
+interpretKey Key'Minus _ ModifierKeys {modifierKeysShift=True} = Nothing
+interpretKey Key'Equal _ ModifierKeys {modifierKeysShift=False} = Just '='
+interpretKey Key'Equal _ ModifierKeys {modifierKeysShift=True} = Just '+'
+interpretKey Key'Backspace _ ModifierKeys {modifierKeysShift=False} = Just (chr 127)
+
+interpretKey Key'Q _ ModifierKeys {modifierKeysShift=False} = Just 'Q'
+interpretKey Key'Q _ ModifierKeys {modifierKeysShift=True} = Just 'q'
+interpretKey Key'W _ ModifierKeys {modifierKeysShift=False} = Just 'W'
+interpretKey Key'W _ ModifierKeys {modifierKeysShift=True} = Just 'w'
+interpretKey Key'E _ ModifierKeys {modifierKeysShift=False} = Just 'E'
+interpretKey Key'E _ ModifierKeys {modifierKeysShift=True} = Just 'e'
+interpretKey Key'R _ ModifierKeys {modifierKeysShift=False} = Just 'R'
+interpretKey Key'R _ ModifierKeys {modifierKeysShift=True} = Just 'r'
+interpretKey Key'T _ ModifierKeys {modifierKeysShift=False} = Just 'T'
+interpretKey Key'T _ ModifierKeys {modifierKeysShift=True} = Just 't'
+interpretKey Key'Y _ ModifierKeys {modifierKeysShift=False} = Just 'Y'
+interpretKey Key'Y _ ModifierKeys {modifierKeysShift=True} = Just 'y'
+interpretKey Key'U _ ModifierKeys {modifierKeysShift=False} = Just 'U'
+interpretKey Key'U _ ModifierKeys {modifierKeysShift=True} = Just 'u'
+interpretKey Key'I _ ModifierKeys {modifierKeysShift=False} = Just 'I'
+interpretKey Key'I _ ModifierKeys {modifierKeysShift=True} = Just 'i'
+interpretKey Key'O _ ModifierKeys {modifierKeysShift=False} = Just 'O'
+interpretKey Key'O _ ModifierKeys {modifierKeysShift=True} = Just 'o'
+interpretKey Key'P _ ModifierKeys {modifierKeysShift=False} = Just 'P'
+interpretKey Key'P _ ModifierKeys {modifierKeysShift=True} = Just 'p'
+interpretKey Key'LeftBracket _ ModifierKeys {modifierKeysShift=False} = Just '['
+interpretKey Key'LeftBracket _ ModifierKeys {modifierKeysShift=True} = Just '{'
+interpretKey Key'RightBracket _ ModifierKeys {modifierKeysShift=False} = Just ']'
+interpretKey Key'RightBracket _ ModifierKeys {modifierKeysShift=True} = Just '}'
+interpretKey Key'Backslash _ ModifierKeys {modifierKeysShift=False} = Just '\\'
+interpretKey Key'Backslash _ ModifierKeys {modifierKeysShift=True} = Nothing
+
+interpretKey Key'A _ ModifierKeys {modifierKeysShift=False} = Just 'A'
+interpretKey Key'A _ ModifierKeys {modifierKeysShift=True} = Just 'a'
+interpretKey Key'S _ ModifierKeys {modifierKeysShift=False} = Just 'S'
+interpretKey Key'S _ ModifierKeys {modifierKeysShift=True} = Just 's'
+interpretKey Key'D _ ModifierKeys {modifierKeysShift=False} = Just 'D'
+interpretKey Key'D _ ModifierKeys {modifierKeysShift=True} = Just 'd'
+interpretKey Key'F _ ModifierKeys {modifierKeysShift=False} = Just 'F'
+interpretKey Key'F _ ModifierKeys {modifierKeysShift=True} = Just 'f'
+interpretKey Key'G _ ModifierKeys {modifierKeysShift=False} = Just 'G'
+interpretKey Key'G _ ModifierKeys {modifierKeysShift=True} = Just 'g'
+interpretKey Key'H _ ModifierKeys {modifierKeysShift=False} = Just 'H'
+interpretKey Key'H _ ModifierKeys {modifierKeysShift=True} = Just 'h'
+interpretKey Key'J _ ModifierKeys {modifierKeysShift=False} = Just 'J'
+interpretKey Key'J _ ModifierKeys {modifierKeysShift=True} = Just 'j'
+interpretKey Key'K _ ModifierKeys {modifierKeysShift=False} = Just 'K'
+interpretKey Key'K _ ModifierKeys {modifierKeysShift=True} = Just 'k'
+interpretKey Key'L _ ModifierKeys {modifierKeysShift=False} = Just 'L'
+interpretKey Key'L _ ModifierKeys {modifierKeysShift=True} = Just 'l'
+interpretKey Key'Semicolon _ ModifierKeys {modifierKeysShift=False} = Just ';'
+interpretKey Key'Semicolon _ ModifierKeys {modifierKeysShift=True} = Just ':'
+interpretKey Key'Apostrophe _ ModifierKeys {modifierKeysShift=False} = Just '\''
+interpretKey Key'Apostrophe _ ModifierKeys {modifierKeysShift=True} = Just '"'
+interpretKey Key'Enter _ ModifierKeys {modifierKeysShift=False} = Just '\r'
+
+interpretKey Key'Z      _ ModifierKeys {modifierKeysShift=False} = Just 'Z'
+interpretKey Key'Z      _ ModifierKeys {modifierKeysShift=True}  = Just 'z'
+interpretKey Key'X      _ ModifierKeys {modifierKeysShift=False} = Just 'X'
+interpretKey Key'X      _ ModifierKeys {modifierKeysShift=True}  = Just 'x'
+interpretKey Key'C      _ ModifierKeys {modifierKeysShift=False} = Just 'C'
+interpretKey Key'C      _ ModifierKeys {modifierKeysShift=True}  = Just 'c'
+interpretKey Key'V      _ ModifierKeys {modifierKeysShift=False} = Just 'V'
+interpretKey Key'V      _ ModifierKeys {modifierKeysShift=True}  = Just 'v'
+interpretKey Key'B      _ ModifierKeys {modifierKeysShift=False} = Just 'B'
+interpretKey Key'B      _ ModifierKeys {modifierKeysShift=True}  = Just 'b'
+interpretKey Key'N      _ ModifierKeys {modifierKeysShift=False} = Just 'N'
+interpretKey Key'N      _ ModifierKeys {modifierKeysShift=True}  = Just 'n'
+interpretKey Key'M      _ ModifierKeys {modifierKeysShift=False} = Just 'M'
+interpretKey Key'M      _ ModifierKeys {modifierKeysShift=True}  = Just 'm'
+interpretKey Key'Comma  _ ModifierKeys {modifierKeysShift=False} = Just ','
+interpretKey Key'Comma  _ ModifierKeys {modifierKeysShift=True}  = Just '<'
+interpretKey Key'Period _ ModifierKeys {modifierKeysShift=False} = Just '.'
+interpretKey Key'Period _ ModifierKeys {modifierKeysShift=True}  = Just '>'
+interpretKey Key'Slash  _ ModifierKeys {modifierKeysShift=False} = Just '/'
+interpretKey Key'Slash  _ ModifierKeys {modifierKeysShift=True}  = Just '?'
+
+interpretKey Key'Space _ ModifierKeys {modifierKeysShift=False} = Just ' '
+
+interpretKey _ _ _ = Nothing

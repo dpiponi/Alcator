@@ -74,6 +74,16 @@ asl mode = mode $ \src -> do
     let new = src `shift` 1
     setNZ new
 
+-- {-# INLINABLE aso #-}
+-- * undocumented *
+aso :: ((Word8 -> MonadAcorn Word8) -> MonadAcorn ()) -> MonadAcorn ()
+aso mode = mode $ \src -> do
+    putC $ src .&. 0x80 > 0
+    let new = src `shift` 1
+    oldA <- getA
+    putA (oldA .|. new)
+    setNZ new
+
 -- {-# INLINABLE rol #-}
 rol :: ((Word8 -> MonadAcorn Word8) -> MonadAcorn ()) -> MonadAcorn ()
 rol mode = mode $ \src -> do

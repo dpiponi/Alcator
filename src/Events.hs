@@ -7,15 +7,10 @@ import Control.Lens hiding (op)
 import Control.Monad.Reader
 import Data.Bits.Lens
 import Data.IORef
-import qualified Data.Set as S
 import qualified Data.Foldable as F
-import Debugger
 import Data.Word
 import qualified Data.Set.Ordered as O
-import Emulation
 import Graphics.UI.GLFW
-import Stella
-import System.Exit
 
 isPressed :: KeyState -> Bool
 isPressed KeyState'Pressed = True
@@ -109,11 +104,15 @@ atom_keyboard = [
 -- 8           S   I   / ? 5 %     [
 -- 9           R   H   . > 4 $     sp
 shiftBits :: Bool -> A.Array Int Word8 -> A.Array Int Word8
-shiftBits x = traverse . bitAt 7 .~ x
-controlBits x = traverse . bitAt 6 .~ x
-keyBit :: Int -> Int -> Bool -> A.Array Int Word8 -> A.Array Int Word8
-keyBit row col x = ix row . bitAt col .~ x
+shiftBits bit = traverse . bitAt 7 .~ bit
 
+controlBits :: Bool -> A.Array Int Word8 -> A.Array Int Word8
+controlBits bit = traverse . bitAt 6 .~ bit
+
+keyBit :: Int -> Int -> Bool -> A.Array Int Word8 -> A.Array Int Word8
+keyBit row col bit = ix row . bitAt col .~ bit
+
+applyKey :: Key -> (Bool, A.Array Int Word8) -> (Bool, A.Array Int Word8)
 applyKey key (shift, rows) =
     let (newShift, rowsOp) = doKey key shift
     in (newShift, rowsOp rows)
@@ -189,7 +188,7 @@ doKey Key'Right        shift = (shift, keyBit 3 0 False . shiftBits True)  -- RI
 doKey Key'Left         shift = (shift, keyBit 3 0 False . shiftBits False) -- LEFT
 doKey Key'PageDown     shift = (shift, keyBit 5 1 False)                   -- COPY
 
-doKey key              shift = (shift, id)
+doKey _                shift = (shift, id)
 
 rowsFromKeys :: O.OSet Key -> MonadAcorn ()
 rowsFromKeys keys = do
@@ -200,6 +199,7 @@ rowsFromKeys keys = do
   forM_ [0..9] $ \row -> do
     store (keyboard_matrix + TO row) (rows' A.! row)
 
+isMod :: Key -> Bool
 isMod Key'LeftShift = True
 isMod Key'RightShift = True
 isMod Key'LeftControl = True
@@ -207,6 +207,7 @@ isMod _ = False
 
 newUpdatePPIA :: IORef (O.OSet Key) -> Key -> Bool -> MonadAcorn Bool
 newUpdatePPIA key_set key pressed = do
+  when (key == Key'RightAlt) $ updateRept pressed
   if pressed
     then do -- in order
         when (not (isMod key)) $ liftIO $ modifyIORef key_set (O.filter isMod)
@@ -218,26 +219,26 @@ newUpdatePPIA key_set key pressed = do
 
   return False
 
-updatePPIA :: Key -> Bool -> MonadAcorn Bool
-updatePPIA key pressed =
-    case lookup key atom_keyboard of
-        Nothing -> return False
-        Just (rows, column) -> do
-            forM_ rows $ \row ->
-                modify (keyboard_matrix + TO row) $ bitAt column .~ not pressed
-            return True
+-- updatePPIA :: Key -> Bool -> MonadAcorn Bool
+-- updatePPIA key pressed = do
+--     case lookup key atom_keyboard of
+--         Nothing -> return False
+--         Just (rows, column) -> do
+--             forM_ rows $ \row ->
+--                 modify (keyboard_matrix + TO row) $ bitAt column .~ not pressed
+--             return True
 
 updateRept :: Bool -> MonadAcorn ()
 updateRept pressed = modify ppia2 $ bitAt 6 .~ pressed
 
 -- Handle keys to Alcator rather than keys for emulated machine
-handleKey :: KeyState -> Key -> MonadAcorn ()
-handleKey motion key = do
-    let pressed = isPressed motion
-    case key of
-      Key'GraveAccent -> liftIO exitSuccess
-      Key'LeftAlt     -> when pressed $ do
-                              Emulation.dumpState
-                              runDebugger
-                              resetNextFrame
-      _ -> return ()
+-- handleKey :: KeyState -> Key -> MonadAcorn ()
+-- handleKey motion key = do
+--     let pressed = isPressed motion
+--     case key of
+--       Key'GraveAccent -> liftIO exitSuccess
+--       Key'LeftAlt     -> when pressed $ do
+--                               Emulation.dumpState
+--                               runDebugger
+--                               resetNextFrame
+--       _ -> return ()

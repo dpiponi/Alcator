@@ -49,9 +49,11 @@ module Emulation(
                  initState,
                  withAbs,
                  withAbsX,
+                 withAbsY,
                  withAcc,
                  withZeroPage,
                  withZeroPageX,
+                 withIndX, -- * undocumented *
                  writeZeroPage,
                  writeZeroPageX,
                  writeZeroPageY
@@ -365,7 +367,7 @@ illegal i =
         case op of
             0x04 -> oscli
             0x05 -> osrdch
-            otherwise -> do 
+            _ -> do 
               putPC $ p0+2
               liftIO $ putStrLn $ "Host call with op 0x" ++ showHex op ""
       else do
@@ -516,11 +518,22 @@ readIndX :: MonadAcorn Word8
 readIndX = do
     index <- getX
     addr0 <- fetchByteTick
-
     discard $ readZpTick addr0
     incPC
-
     read16zpTick (addr0+index) >>= readMemoryTick
+
+-- * undocumented *
+-- {-# INLINABLE withIndX #-}
+withIndX :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
+withIndX op = do
+    index <- getX
+    addr0 <- fetchByteTick
+    discard $ readZpTick addr0
+    incPC
+    addrX <- read16zpTick (addr0+index)
+    src <- readMemoryTick addrX
+    dst <- op src
+    writeMemoryTick addrX dst
 
 -- 3 clock cycles
 -- {-# INLINABLE readZeroPage #-}
@@ -713,18 +726,34 @@ withAbsX op = do
     p0 <- getPC
     index <- getX
     addr <- read16tick p0
-
     let (halfAddrX, addrX) = halfSum addr index
-
     discard $ readMemoryTick halfAddrX
-
     src <- readMemoryTick addrX
-
     uselessly $ writeMemoryTick addrX src
-
     addPC 2
     dst <- op src
     writeMemoryTick addrX dst
+
+-- 7 clock cycles
+-- {-# INLINE withAbsY #-}
+-- * undocumented *
+withAbsY :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
+withAbsY op = do
+    p0 <- getPC
+    index <- getY
+    addr <- read16tick p0
+
+    let (halfAddrY, addrY) = halfSum addr index
+
+    discard $ readMemoryTick halfAddrY
+
+    src <- readMemoryTick addrY
+
+    uselessly $ writeMemoryTick addrY src
+
+    addPC 2
+    dst <- op src
+    writeMemoryTick addrY dst
 
 -- 7 clock cycles
 -- {-# INLINABLE brk #-}

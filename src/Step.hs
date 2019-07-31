@@ -9,6 +9,7 @@ import Control.Monad
 import ALU
 
 -- -- Trying not having this inlined {-# IGNOREINLINABLE step #-}
+-- http://ftp.pigwa.net/stuff/collections/nir_dary_cds/Tech%20Info/6502/opcodes.html
 step :: MonadAcorn ()
 step = do
     p0 <- getPC
@@ -18,22 +19,28 @@ step = do
     case i of
         0x00 -> brk
         0x01 -> ora readIndX
+        0x03 -> aso withIndX            -- *
         0x04 -> void readZeroPage -- XXX undocumented "DOP" nop
         0x05 -> ora readZeroPage
         0x06 -> asl withZeroPage
+        0x07 -> aso withZeroPage        -- *
         0x08 -> php
         0x09 -> ora readImm
         0x0a -> asl withAcc
         0x0d -> ora readAbs
         0x0e -> asl withAbs
+        0x0f -> aso withAbs             -- *
         0x10 -> bra getN False
         0x11 -> ora readIndY
         0x15 -> ora readZeroPageX
         0x16 -> asl withZeroPageX
+        0x17 -> aso withZeroPageX       -- *
         0x18 -> set putC False
         0x19 -> ora readAbsY
+        0x1b -> aso withAbsY
         0x1d -> ora readAbsX
         0x1e -> asl withAbsX
+        0x1f -> aso withAbsX            -- *
         0x20 -> jsr
         0x21 -> and readIndX
         0x24 -> bit readZeroPage
