@@ -32,6 +32,7 @@ step = do
         0x0f -> aso withAbs             -- *
         0x10 -> bra getN False
         0x11 -> ora readIndY
+        0x13 -> aso withIndY            -- *
         0x15 -> ora readZeroPageX
         0x16 -> asl withZeroPageX
         0x17 -> aso withZeroPageX       -- *

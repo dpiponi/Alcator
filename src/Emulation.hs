@@ -54,6 +54,7 @@ module Emulation(
                  withZeroPage,
                  withZeroPageX,
                  withIndX, -- * undocumented *
+                 withIndY, -- * undocumented *
                  writeZeroPage,
                  writeZeroPageX,
                  writeZeroPageY
@@ -522,7 +523,7 @@ readIndX = do
     incPC
     read16zpTick (addr0+index) >>= readMemoryTick
 
--- * undocumented *
+-- * undocumented * timing probably incorrect
 -- {-# INLINABLE withIndX #-}
 withIndX :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
 withIndX op = do
@@ -534,6 +535,24 @@ withIndX op = do
     src <- readMemoryTick addrX
     dst <- op src
     writeMemoryTick addrX dst
+
+-- * undocumented * timing probably incorrect
+-- {-# INLINABLE withIndY #-}
+withIndY :: (Word8 -> MonadAcorn Word8) -> MonadAcorn ()
+withIndY op = do
+    addr <- fetchByteTick >>= read16zpTick
+
+    index <- getY
+    let (halfAddrY, addrY) = halfSum addr index
+
+    when (halfAddrY /= addrY) $ discard $ readMemoryTick halfAddrY
+
+    incPC
+    src <- readMemoryTick addrY
+    liftIO $ print $ "Reading " ++ showHex src "" ++ " from " ++ showHex addrY ""
+    dst <- op src
+    liftIO $ print $ "Writing " ++ showHex dst "" ++ " to " ++ showHex addrY ""
+    writeMemoryTick addrY dst
 
 -- 3 clock cycles
 -- {-# INLINABLE readZeroPage #-}
