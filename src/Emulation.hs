@@ -102,6 +102,9 @@ writeMemory addr' v = do
     let addr = addr'
     pureWriteMemory (memoryType addr) addr v
 
+readMemoryTick :: Word16 -> MonadAcorn Word8
+readMemoryTick addr = tick 1 >> readMemory addr
+
 writeMemoryTick :: Word16 -> Word8 -> MonadAcorn ()
 writeMemoryTick addr v = do
     tick 1
@@ -114,6 +117,9 @@ tick n = do
     c <- useClock id
     -- Misses if tick 2 used.
     when (c `mod` 16667 == 0) renderDisplay
+
+fetchByteTick :: MonadAcorn Word8
+fetchByteTick = getPC >>= readMemoryTick
 
 -- Host instruction stuff..
 writeWord32 :: Word16 -> Word32 -> MonadAcorn ()
@@ -389,9 +395,6 @@ read16 addr = do
     hi0 <- readMemory (addr+1)
     return $ make16 lo0 hi0
 
-readMemoryTick :: Word16 -> MonadAcorn Word8
-readMemoryTick addr = tick 1 >> readMemory addr
-
 readZpTick :: Word8 -> MonadAcorn Word8
 readZpTick addr = tick 1 >> readMemory (i16 addr)
 
@@ -459,9 +462,6 @@ writeIndY src = do
 
     writeMemoryTick addrY src
     incPC
-
-fetchByteTick :: MonadAcorn Word8
-fetchByteTick = getPC >>= readMemoryTick
 
 -- 4 clock cycles
 -- {-# INLINABLE writeZeroPageX #-}
@@ -778,8 +778,6 @@ withAbsY op = do
 -- {-# INLINABLE brk #-}
 brk :: MonadAcorn ()
 brk = do
---     p0 <- getPC
---     discard $ readMemoryTick p0
     discard $ fetchByteTick
     incPC
 

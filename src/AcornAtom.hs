@@ -84,7 +84,6 @@ import GHC.Generics
 import qualified Graphics.Rendering.OpenGL as GL
 import Asm
 import Codec.Serialise
--- import Control.Concurrent
 import Control.Concurrent.STM
 
 -- Need to make left and right separately configurable
@@ -96,8 +95,6 @@ data GraphicsState = GraphicsState {
     _glAttrib :: !GL.AttribLocation,
     _windowWidth :: !Int,
     _windowHeight :: !Int
---     _xscale :: !Int,
---     _yscale :: !Int
 }
 
 $(makeLenses ''GraphicsState)
