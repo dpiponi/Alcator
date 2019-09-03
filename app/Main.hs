@@ -48,14 +48,13 @@ clargs = Args { command = Nothing,
                 debugStart = False,
                 workingDirectory = "." }
 
-loopEmulation :: Window -> TQueue Word8 ->IORef (O.OSet Key) ->
+loopEmulation :: Window -> TQueue Word8 -> IORef (O.OSet Key) ->
                  TQueue UIKey -> MonadAcorn ()
 loopEmulation window key_buffer' key_set queue = do
   maybeKey <- liftIO $ atomically $ tryReadTQueue queue
   case maybeKey of
       Nothing -> return ()
       Just queuedKey -> do
---         let UIKey {uiKey = key, uiState = motion, uiMods = mods} = queuedKey
         case queuedKey of
           UIKey { uiKey=key,
                   uiState=KeyState'Pressed,
@@ -169,7 +168,7 @@ main = do
     --  though it appears to on OSX and Linux
     queue <- newTQueueIO
     key_set <- newIORef O.empty
-    setKeyCallback window (Just (keyCallback state queue))
+    setKeyCallback window (Just $ keyCallback state queue)
     void $ setWindowCloseCallback window $ Just $ \_ -> exitSuccess
     void $ forkIO $ forever pollEvents
 
