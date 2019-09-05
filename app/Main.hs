@@ -10,7 +10,6 @@
 module Main where
 
 import AcornAtom hiding (ram, rom)
-import qualified Data.ByteString.Internal as BS (c2w)
 import Binary
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -19,9 +18,9 @@ import Control.Monad
 import Control.Monad.Reader
 import Data.Array.IO
 import Data.Binary hiding (get)
+import Data.Char
 import Data.IORef
 import Debugger
-import Data.Char
 import Display
 import Emulation
 import Events
@@ -36,7 +35,7 @@ import System.Console.CmdArgs hiding ((+=))
 import System.Directory
 import System.Exit
 import System.Random
--- import qualified Data.Foldable as F
+import qualified Data.ByteString.Internal as BS (c2w)
 import qualified Data.Set.Ordered as O
 
 data Args = Args { command :: Maybe String,
